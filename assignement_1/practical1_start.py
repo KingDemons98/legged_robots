@@ -93,10 +93,6 @@ for $\frac{\partial L}{\partial q}$.
 """
 print('-------------------------')
 print('Calculate the partial derivatives of Lagrangian:')
-# dLddq1 = m1 * dq1 * l1 **2 * ddq1 + 0.5 * m2 * (2 * dq1 * ddq1 * l1**2 + 2 * dq2 * ddq1 * l1 * l2 * cos(q1 - q2))
-# dLddq2 = 0.5 * m2 *(2 * dq1 * ddq2 * l1 * l2 *cos(q1 - q2) + 2 * dq2 * ddq2 * l2**2)
-# dLdq1  = g * (-l1 * m1 * sin(q1) * dq1 - l1 * m2 * sin(q1) * dq1) - m2 * dq1 * dq2 * l1 * l2 * sin(q1 - q2) *dq1
-# dLdq2  = g * (-l2 * m2 * sin(q2) * dq2) + m2 * dq1 * dq2 * l1 * l2 * sin(q1 - q2) * dq2
 dLddq1 = diff(L, dq1)
 dLddq2 = diff(L, dq2)
 dLdq1 = diff(L, q1)

@@ -1,0 +1,16 @@
+Group members: Guillaume Krafft, Julien Moreno, Jonathan Henry
+
+
+
+1) Kp and Kd are important for the behaviour of the leg, mainly in terms of rigidity (Kp too small and the leg crumbles on itself, too big and it is too stiff).
+Since we set to goal velocity to 0, increasing Kd limits the speed of the joints, therefore limiting the velocity going back to its starting position (like a damped 
+oscillators).
+When the leg is on the ground, the same behaviour can be observed, with the only difference being that the leg is no longer blocked in one position but instead
+bounces, with differents rigidity and speed depending on the parameters.
+
+2)When adding gravity, we need to increase the minimal gains, to compensate for the additional force.
+
+3)Such a trajectory would be much more difficult to simulate, joint space is not as easy to control in position.
+
+Cartesian PD controller is simple to control and works quite well for all basics manipulations. Adding a joint controller could improve when planning for a 
+specific configuration of the leg.

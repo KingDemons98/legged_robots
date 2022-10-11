@@ -1,8 +1,13 @@
 # Jacobian practical
 from env.leg_gym_env import LegGymEnv
 import numpy as np
+"""
+Import to solve the problem between pycharm and matplotlib
+"""
 import matplotlib
 matplotlib.use('TkAgg')
+
+
 import matplotlib.pyplot as plt
 
 def jacobian_abs(q, l1=0.209, l2=0.195):
@@ -46,12 +51,12 @@ def jacobian_rel(q, l1=0.209, l2=0.195):
 
 
 env = LegGymEnv(render=True,
-                on_rack=True,  # set True to hang up robot in air
+                on_rack=False,  # set True to hang up robot in air
                 motor_control_mode='TORQUE',
                 action_repeat=1,
                 )
 dt = 1000
-NUM_STEPS = 50 * dt  # simulate 5 seconds (sim dt is 0.001)
+NUM_STEPS = 10 * dt  # simulate 5 seconds (sim dt is 0.001)
 
 env._robot_config.INIT_MOTOR_ANGLES = np.array([-np.pi / 4, np.pi / 2])  # test different initial motor angles
 obs = env.reset()  # reset environment if changing initial configuration
@@ -59,8 +64,8 @@ obs = env.reset()  # reset environment if changing initial configuration
 action = np.zeros(2)  # either torques or motor angles, depending on mode
 
 # Test different Cartesian gains! How important are these?
-kpCartesian = np.diag([500] * 2)
-kdCartesian = np.diag([30] * 2)
+kpCartesian = np.diag([2000] * 2)
+kdCartesian = np.diag([10] * 2)
 
 # test different desired foot positions
 des_foot_pos = np.array([0.05, -0.3])
@@ -82,6 +87,12 @@ for i in range(NUM_STEPS):
     # Calculate torque (Cartesian PD, and/or desired force)
     tau = np.matmul(np.transpose(J), np.matmul(kpCartesian, des_foot_pos - foot_pos) + np.matmul(kdCartesian, -foot_vel))
 
+    #changing trajectory
+    if (i < NUM_STEPS - NUM_STEPS/10):
+        des_foot_pos = np.array([0.05, -0.3 + 0.2 * i /NUM_STEPS])
+    else:
+        des_foot_pos = np.array([0.05, -0.3])
+
     # add gravity compensation (Force), (get mass with env.robot.total_mass)
     g = 9.81
     force = np.zeros(2)
@@ -99,8 +110,8 @@ for i in range(NUM_STEPS):
 
 fig, ax = plt.subplots(2, 2)
 """Torques plot"""
-ax[0, 0].plot(time, torques[0], label = 'torques for x')
-ax[0, 0].plot(time, torques[1], label = 'torques for y')
+ax[0, 0].plot(time, torques[0], label = 'torques for motor 1')
+ax[0, 0].plot(time, torques[1], label = 'torques for motor 2')
 ax[0, 0].set_xlabel('time [s]')
 ax[0, 0].set_ylabel('torques [Nm]')
 ax[0, 0].set_title('Torques')

@@ -71,7 +71,7 @@ for i in range(NUM_SECONDS*1000):
 
     # Compute jacobian and foot_pos in leg frame (use GetMotorAngles() )
     J, ee_pos_legFrame = jacobian_rel(env.robot.GetMotorAngles())
-
+#t
     # Add Cartesian PD (and/or joint PD? Think carefully about this, and try it out.)
     foot_pos = ee_pos_legFrame
     des_foot_pos = nominal_foot_pos

@@ -1,4 +1,6 @@
 # Hopping practical optimization
+import datetime
+
 import numpy as np
 
 from pymoo.core.problem import ElementwiseProblem
@@ -13,11 +15,11 @@ SINGLE_JUMP = True
 class HoppingProblem(ElementwiseProblem):
     """Define interface to problem (see pymoo documentation). """
     def __init__(self):
-        super().__init__(n_var=2,                 # number of variables to optimize (sample)
+        super().__init__(n_var=11,                 # number of variables to optimize (sample)
                          n_obj=1,                 # number of objectives
                          n_ieq_constr=0,          # no inequalities 
-                         xl=np.array([0., 0.]),   # variable lower limits (what makes sense?)
-                         xu=np.array([1., 1.]))   # variable upper limits (what makes sense?) 
+                         xl=np.array([0.1, 20, 20, 200, 200, 10, 10, 2, 2, 0.1, 0.1]),   # variable lower limits (what makes sense?)
+                         xu=np.array([10, 300, 300, 800, 800, 50, 50, 20, 20, 1., 1.]))   # variable upper limits (what makes sense?)
         # Define environment
         self.env = LegGymEnv(render=False,  # don't render during optimization
                 on_rack=False, 
@@ -35,7 +37,20 @@ class HoppingProblem(ElementwiseProblem):
         # Sample variables to optimize 
         f = x[0]        # hopping frequency
         Fz_max = x[1]   # max peak force in Z direction
-        Fx_max = 0      # max peak force in X direction (can add)
+        Fx_max = x[2]      # max peak force in X direction (can add)
+
+        # cartesian controller gains
+        kpCartesian_1 = x[3]
+        kpCartesian_2 = x[4]
+        kdCartesian_1 = x[5]
+        kdCartesian_2 = x[6]
+
+        # joints controller gains
+        kpJoint_1 = x[7]
+        kpJoint_2 = x[8]
+        kdJoint_1 = x[9]
+        kdJoint_2 = x[10]
+
         # [TODO] feel free to add more variables! What else could you optimize? 
 
         # Note: the below should look essentially the same as in practical4_hopping.py. 
@@ -47,18 +62,24 @@ class HoppingProblem(ElementwiseProblem):
 
         # design Z force trajectory as a funtion of Fz_max, f, t
         #   Hint: use a sine function (but don't forget to remove positive forces)
-        force_traj_z = np.zeros(len(t))
+        force_traj_z = Fz_max * np.sin(t * 2 * np.pi * f)
+        force_traj_z[force_traj_z > 0] = 0
 
         if SINGLE_JUMP:
             # remove rest of profile (just keep the first peak)
-            force_traj_z = np.zeros(len(t))
+            period = int((1 / f) * 1000)
+            force_traj_z[period:] = 0
 
         # design X force trajectory as a funtion of Fx_max, f, t
-        force_traj_x = np.zeros(len(t))
+        force_traj_x = Fx_max * np.sin(t * 2 * np.pi * f)
+        force_traj_x[force_traj_x > 0] = 0
         
         # sample Cartesian PD gains (can change or optimize)
-        kpCartesian = np.diag([500,300])
-        kdCartesian = np.diag([30,20])
+        kpCartesian = np.diag([kpCartesian_1,kpCartesian_2])
+        kdCartesian = np.diag([kdCartesian_1,kdCartesian_2])
+
+        kpJoint = np.array([kpJoint_1, kpJoint_2])
+        kdJoint = np.array([kdJoint_1, kdJoint_2])
 
         # sample nominal foot position (can change or optimize)
         nominal_foot_pos = np.array([0.0,-0.2]) 
@@ -76,8 +97,17 @@ class HoppingProblem(ElementwiseProblem):
             # Compute jacobian and foot_pos in leg frame (use GetMotorAngles() )
             J, ee_pos_legFrame = jacobian_rel(self.env.robot.GetMotorAngles())
 
-            # Add Cartesian PD (and/or joint PD? Think carefully about this, and try it out.)
-            tau += np.zeros(2) # [TODO]
+            foot_pos = ee_pos_legFrame
+            des_foot_pos = nominal_foot_pos
+            motor_vel = self.env.robot.GetMotorVelocities()
+            foot_vel = np.matmul(J, motor_vel)
+            des_foot_vel = 0
+            tau += np.matmul(np.transpose(J), np.matmul(kpCartesian, des_foot_pos - foot_pos) + np.matmul(kdCartesian,
+                                                                                                          des_foot_vel - foot_vel))
+
+            qdes = ik_geometrical(xz=des_foot_pos)  # ik_geometrical
+
+            tau += kpJoint * (qdes - self.env.robot.GetMotorAngles()) + kdJoint * (0 - motor_vel)
 
             # Add force profile contribution
             tau += J.T @ np.array([force_traj_x[i], force_traj_z[i]])
@@ -92,7 +122,7 @@ class HoppingProblem(ElementwiseProblem):
                 max_base_z = base_pos[2]
 
         # objective function (what do we want to minimize?) 
-        f1 = 0 # TODO
+        f1 = -max_base_z
 
         out["F"] = [f1]
 
@@ -101,14 +131,27 @@ class HoppingProblem(ElementwiseProblem):
 problem = HoppingProblem()
 
 # Define algorithms and initial conditions (depends on your variable ranges you selected above!)
-algorithm = CMAES(x0=np.array([0.,0.])) # TODO: change initial conditions
+algorithm = CMAES(x0=np.array([1.5, 50, 90, 500, 300, 30, 20, 6, 6, 0.6, 0.6])) #
 
 # Run optimization
 res = minimize(problem,
                algorithm,
-               ('n_iter', 20), # may need to increase number of iterations
+               ('n_iter', 120), # may need to increase number of iterations
                seed=1,
                verbose=True)
+
+#writing the results of the optimisation to a .txt file to simplify the tests
+filename = "solutions" + '/' + datetime.datetime.now().strftime("solution-%Y-%m-%d-%H-%M-%S-%f") + ".txt"
+f = open(filename, "x")
+f.write(f"KpCartesian = np.diag([{res.X[3]}, {res.X[4]}])\n")
+f.write(f"KdCartesian = np.diag([{res.X[5]}, {res.X[6]}])\n\n")
+
+f.write(f"kpJoint = np.array([{res.X[7]}, {res.X[8]}])\n")
+f.write(f"kdJoint = np.array([{res.X[9]}, {res.X[10]}])\n\n")
+
+f.write(f"Fx_max = {res.X[2]}\n")
+f.write(f"Fz_max = {res.X[1]}\n")
+f.write(f"f = {res.X[0]}\n")
 
 print(f"Best solution found: \nX = {res.X}\nF = {res.F}\nCV= {res.CV}")
 print("Check your optimized variables in practical4_hopping.py")

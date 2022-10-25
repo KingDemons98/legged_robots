@@ -10,6 +10,8 @@ from pymoo.algorithms.soo.nonconvex.cmaes import CMAES
 from env.leg_gym_env import LegGymEnv
 from leg_helpers import *
 
+import os
+
 SINGLE_JUMP = True
 
 class HoppingProblem(ElementwiseProblem):
@@ -140,7 +142,10 @@ res = minimize(problem,
                seed=1,
                verbose=True)
 
-#writing the results of the optimisation to a .txt file to simplify the tests
+
+if not os.path.isdir("solutions/"):
+    os.makedirs("solutions/")
+
 filename = "solutions" + '/' + datetime.datetime.now().strftime("solution-%Y-%m-%d-%H-%M-%S-%f") + ".txt"
 f = open(filename, "x")
 f.write(f"KpCartesian = np.diag([{res.X[3]}, {res.X[4]}])\n")

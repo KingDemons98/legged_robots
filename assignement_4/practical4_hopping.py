@@ -12,31 +12,31 @@ env = LegGymEnv(render=True,
                 on_rack=False,    # set True to debug 
                 motor_control_mode='TORQUE',
                 action_repeat=1,
-                # record_video=True
+                record_video=False
                 )
 
-NUM_SECONDS = 5   # simulate N seconds (sim dt is 0.001)
+NUM_SECONDS = 10   # simulate N seconds (sim dt is 0.001)
 tau = np.zeros(2) # either torques or motor angles, depending on mode
 
 # peform one jump, or continuous jumping
 SINGLE_JUMP = False
 
 # sample Cartesian PD gains (can change or optimize)
-kpCartesian = np.diag([500,300])
-kdCartesian = np.diag([30,20])
+kpCartesian = np.diag([532, 211])
+kdCartesian = np.diag([32, 11])
 
-kpJoint = np.array([6,6])
-kdJoint = np.array([0.8,0.8])
+kpJoint = np.array([3.6, 2.5])
+kdJoint = np.array([0.47, 0.19])
 
 # define variables and force profile
-t = np.linspace(0,NUM_SECONDS,NUM_SECONDS*1000 + 1)
-Fx_max = 50    # max peak force in X direction
-Fz_max = 90     # max peak force in Z direction
-f = 1.5          # frequency
+t = np.linspace(0, NUM_SECONDS, NUM_SECONDS*1000 + 1)
+Fx_max = 294    # max peak force in X direction
+Fz_max = 124     # max peak force in Z direction
+f = 1.11          # frequency
 
 if SINGLE_JUMP:
     # may want to choose different parameters
-    Fx_max = 50     # max peak force in X direction
+    Fx_max = 2.99572514e+02     # max peak force in X direction
     Fz_max = 90     # max peak force in Z direction
     f = 2
 
@@ -98,3 +98,18 @@ for i in range(NUM_SECONDS*1000):
 print('Peak z', max_base_z)
 
 # [TODO] make some plots to verify your force profile and system states
+
+# solution de la vidéo envoyée sur le groupe
+# kpCartesian = np.diag([532, 211])
+# kdCartesian = np.diag([32, 11])
+#
+# kpJoint = np.array([3.6, 2.5])
+# kdJoint = np.array([0.47, 0.19])
+# Fx_max = 294    # max peak force in X direction
+# Fz_max = 124     # max peak force in Z direction
+# f = 1.11          # frequency
+
+# solution actuelle
+# X = [5.35107949e-01 2.99572514e+02 1.53487676e+02 7.99896614e+02
+#  2.00013433e+02 1.00307487e+01 1.00119143e+01 6.24214758e+00
+#  2.00222729e+00 1.00156367e-01 1.00001906e-01]

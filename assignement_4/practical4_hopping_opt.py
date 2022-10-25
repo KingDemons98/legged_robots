@@ -6,6 +6,7 @@ import numpy as np
 from pymoo.core.problem import ElementwiseProblem
 from pymoo.optimize import minimize
 from pymoo.algorithms.soo.nonconvex.cmaes import CMAES
+from pymoo.algorithms.moo.nsga2 import NSGA2
 
 from env.leg_gym_env import LegGymEnv
 from leg_helpers import *
@@ -19,9 +20,9 @@ class HoppingProblem(ElementwiseProblem):
     def __init__(self):
         super().__init__(n_var=11,                 # number of variables to optimize (sample)
                          n_obj=1,                 # number of objectives
-                         n_ieq_constr=0,          # no inequalities 
+                         n_ieq_constr=0,          # no inequalities
                          xl=np.array([0.1, 20, 20, 200, 200, 10, 10, 2, 2, 0.1, 0.1]),   # variable lower limits (what makes sense?)
-                         xu=np.array([10, 300, 300, 800, 800, 50, 50, 20, 20, 1., 1.]))   # variable upper limits (what makes sense?)
+                         xu=np.array([2, 300, 300, 800, 800, 50, 50, 20, 20, 1., 1.]))   # variable upper limits (what makes sense?)
         # Define environment
         self.env = LegGymEnv(render=False,  # don't render during optimization
                 on_rack=False, 
@@ -90,6 +91,7 @@ class HoppingProblem(ElementwiseProblem):
         #   sample states to consider 
         sum_z_height = 0
         max_base_z = 0
+        max_base_x = 0
 
         # Track the profile: what kind of controller will you use? 
         for i in range(NUM_SECONDS*1000):
@@ -123,10 +125,17 @@ class HoppingProblem(ElementwiseProblem):
             if base_pos[2] > max_base_z:
                 max_base_z = base_pos[2]
 
+            if base_pos[0] > max_base_x:
+                max_base_x = base_pos[0]
+
         # objective function (what do we want to minimize?) 
-        f1 = -max_base_z
+        # f1 = max_base_x - 15
+        f1 = -max_base_z - max_base_x
+
+        # g1 = -max_base_z + 1
 
         out["F"] = [f1]
+        # out["G"] = [g1]
 
 
 # Define problem
@@ -138,7 +147,7 @@ algorithm = CMAES(x0=np.array([1.5, 50, 90, 500, 300, 30, 20, 6, 6, 0.6, 0.6])) 
 # Run optimization
 res = minimize(problem,
                algorithm,
-               ('n_iter', 120), # may need to increase number of iterations
+               ('n_iter', 25), # may need to increase number of iterations
                seed=1,
                verbose=True)
 
@@ -148,8 +157,8 @@ if not os.path.isdir("solutions/"):
 
 filename = "solutions" + '/' + datetime.datetime.now().strftime("solution-%Y-%m-%d-%H-%M-%S-%f") + ".txt"
 f = open(filename, "x")
-f.write(f"KpCartesian = np.diag([{res.X[3]}, {res.X[4]}])\n")
-f.write(f"KdCartesian = np.diag([{res.X[5]}, {res.X[6]}])\n\n")
+f.write(f"kpCartesian = np.diag([{res.X[3]}, {res.X[4]}])\n")
+f.write(f"kdCartesian = np.diag([{res.X[5]}, {res.X[6]}])\n\n")
 
 f.write(f"kpJoint = np.array([{res.X[7]}, {res.X[8]}])\n")
 f.write(f"kdJoint = np.array([{res.X[9]}, {res.X[10]}])\n\n")

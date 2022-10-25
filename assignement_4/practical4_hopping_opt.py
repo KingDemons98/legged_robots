@@ -11,7 +11,9 @@ from pymoo.algorithms.moo.nsga2 import NSGA2
 from env.leg_gym_env import LegGymEnv
 from leg_helpers import *
 
-SINGLE_JUMP = False
+import os
+
+SINGLE_JUMP = True
 
 class HoppingProblem(ElementwiseProblem):
     """Define interface to problem (see pymoo documentation). """
@@ -149,7 +151,10 @@ res = minimize(problem,
                seed=1,
                verbose=True)
 
-#writing the results of the optimisation to a .txt file to simplify the tests
+
+if not os.path.isdir("solutions/"):
+    os.makedirs("solutions/")
+
 filename = "solutions" + '/' + datetime.datetime.now().strftime("solution-%Y-%m-%d-%H-%M-%S-%f") + ".txt"
 f = open(filename, "x")
 f.write(f"kpCartesian = np.diag([{res.X[3]}, {res.X[4]}])\n")

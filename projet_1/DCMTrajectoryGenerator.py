@@ -11,7 +11,7 @@ class DCMTrajectoryGenerator:
         self.numberOfSamplesPerSecond = 240 #Number of sampling of the trajectory in each second
         self.numberOfSteps = 14 #This is the desired number of steps for walking
         self.DCM = list("")
-        self.gravityAcceleration = 9.81
+        self.gravityAcceleration = 1.625
         self.omega = math.sqrt(self.gravityAcceleration/self.CoMHeight) #Omega is a constant value and is called natural frequency of linear inverted pendulum
         pass
 

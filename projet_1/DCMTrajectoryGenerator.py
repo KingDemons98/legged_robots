@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 
 class DCMTrajectoryGenerator:
-    def __init__(self,pelvisHeight,  stepTiming):
+    def __init__(self, pelvisHeight, stepTiming):
         self.CoMHeight = pelvisHeight # We assume that CoM and pelvis are the same point
         self.stepDuration = stepTiming
         self.timeStep = 1/240 #We select this value for the timestep(dt) for discretization of the trajectory. The 240 Hz is the default numerical solving frequency of the pybullet. Therefore we select this value for DCM trajectory generation discretization.

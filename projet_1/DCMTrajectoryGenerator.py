@@ -4,14 +4,14 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 
 class DCMTrajectoryGenerator:
-    def __init__(self, pelvisHeight, stepTiming):
+    def __init__(self, pelvisHeight, stepTiming, moon):
         self.CoMHeight = pelvisHeight # We assume that CoM and pelvis are the same point
         self.stepDuration = stepTiming
         self.timeStep = 1/240 #We select this value for the timestep(dt) for discretization of the trajectory. The 240 Hz is the default numerical solving frequency of the pybullet. Therefore we select this value for DCM trajectory generation discretization.
         self.numberOfSamplesPerSecond = 240 #Number of sampling of the trajectory in each second
         self.numberOfSteps = 14 #This is the desired number of steps for walking
         self.DCM = list("")
-        self.gravityAcceleration = 1.625
+        self.gravityAcceleration = 1.625 if moon else 9.81
         self.omega = math.sqrt(self.gravityAcceleration/self.CoMHeight) #Omega is a constant value and is called natural frequency of linear inverted pendulum
         pass
 

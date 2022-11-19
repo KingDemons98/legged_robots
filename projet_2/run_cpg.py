@@ -78,10 +78,9 @@ for _ in range(1):
         cpg = HopfNetwork(time_step=TIME_STEP)
 
 
-    TEST_STEPS = int(2 / (TIME_STEP))
+    TEST_STEPS = int(10 / (TIME_STEP))
     t = np.arange(TEST_STEPS)*TIME_STEP
 
-    # [TODO] initialize data structures to save CPG and robot states
     des_leg_pos = np.zeros((3, TEST_STEPS))
     act_leg_pos = np.zeros((3, TEST_STEPS))
 
@@ -171,8 +170,6 @@ for _ in range(1):
 
         # send torques to robot and simulate TIME_STEP seconds
         env.step(action)
-
-        # [TODO] save any CPG or robot states
 
     avg = np.zeros([TEST_STEPS])
     n = 500

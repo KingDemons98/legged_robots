@@ -51,8 +51,10 @@ TIME_STEP = 0.001
 foot_y = 0.0838 # this is the hip length 
 sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
 
+gait = "TROT"
+
 env = QuadrupedGymEnv(render=True,              # visualize
-                    on_rack=True,              # useful for debugging!
+                    on_rack=False,              # useful for debugging!
                     isRLGymInterface=False,     # not using RL
                     time_step=TIME_STEP,
                     action_repeat=1,
@@ -62,12 +64,25 @@ env = QuadrupedGymEnv(render=True,              # visualize
                     )
 
 # initialize Hopf Network, supply gait
-cpg = HopfNetwork(time_step=TIME_STEP)
+if(gait == "TROT"):
+    cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT", omega_swing=10 * 2 * np.pi, omega_stance=9 * 2 * np.pi,
+                      des_step_len=0.07)
+elif(gait == "BOUND"):
+    cpg = HopfNetwork(time_step=TIME_STEP, gait="BOUND", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
+elif(gait == "WALK"):
+    cpg = HopfNetwork(time_step=TIME_STEP, gait="WALK", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
+elif(gait == "PACE"):
+    cpg = HopfNetwork(time_step=TIME_STEP, gait="PACE", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
+else:
+    print("error: gait not supported, using the default one")
+    cpg = HopfNetwork(time_step=TIME_STEP)
+
 
 TEST_STEPS = int(10 / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
 # [TODO] initialize data structures to save CPG and robot states
+leg
 
 
 

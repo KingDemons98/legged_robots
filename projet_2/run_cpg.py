@@ -53,7 +53,7 @@ sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negati
 
 gait = "TROT"
 
-env = QuadrupedGymEnv(render=True,              # visualize
+env = QuadrupedGymEnv(render=False,              # visualize
                     on_rack=False,              # useful for debugging!
                     isRLGymInterface=False,     # not using RL
                     time_step=TIME_STEP,
@@ -66,7 +66,7 @@ env = QuadrupedGymEnv(render=True,              # visualize
 # initialize Hopf Network, supply gait
 if(gait == "TROT"):
     cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT", omega_swing=10 * 2 * np.pi, omega_stance=9 * 2 * np.pi,
-                      des_step_len=0.07)
+                      des_step_len=0.07, alpha=20)
 elif(gait == "BOUND"):
     cpg = HopfNetwork(time_step=TIME_STEP, gait="BOUND", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
 elif(gait == "WALK"):
@@ -78,11 +78,21 @@ else:
     cpg = HopfNetwork(time_step=TIME_STEP)
 
 
-TEST_STEPS = int(10 / (TIME_STEP))
+TEST_STEPS = int(2 / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
 # [TODO] initialize data structures to save CPG and robot states
-leg
+des_leg_pos = np.zeros((3, TEST_STEPS))
+act_leg_pos = np.zeros((3, TEST_STEPS))
+
+des_joint_angles = np.zeros((3, TEST_STEPS)) #peut etre pas suffisant
+act_joint_angles = np.zeros((3, TEST_STEPS))
+
+r = np.zeros((4, TEST_STEPS))
+rdot = np.zeros((4, TEST_STEPS))
+theta = np.zeros((4, TEST_STEPS))
+theta_dot = np.zeros((4, TEST_STEPS))
+
 
 
 
@@ -102,6 +112,12 @@ for j in range(TEST_STEPS):
   q = env.robot.GetMotorAngles()
   dq = env.robot.GetMotorVelocities()
 
+  #get values for plot
+  r[:, j] = cpg.get_r()
+  rdot[:, j] = cpg.get_dr()
+  theta[:, j] = cpg.get_theta()
+  theta_dot[:, j] = cpg.get_dtheta()
+
   # loop through desired foot positions and calculate torques
   for i in range(4):
     # initialize torques for legi
@@ -113,14 +129,27 @@ for j in range(TEST_STEPS):
     # Add joint PD contribution to tau for leg i (Equation 4)
     tau += kp * (leg_q - q[3*i:3*i+3]) + kd * (0 - dq[3*i:3*i+3])
 
+    # print(f'leg q is {leg_q}')
+
+    #get values for plots
+    if (i == 0):
+        des_leg_pos[:, j] = leg_xyz
+        des_joint_angles[:, j] = leg_q
+        act_joint_angles[:, j] = q[0:3]
+
+
     # add Cartesian PD contribution
     if ADD_CARTESIAN_PD:
       # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
-
       jacob_cart, foot_pos = env.robot.ComputeJacobianAndPosition(i)
-      # Get current foot velocity in leg frame (Equation 2)
 
+      #get values for plots
+      if (i == 0):
+        act_leg_pos[:, j] = foot_pos
+
+      # Get current foot velocity in leg frame (Equation 2)
       foot_vel = np.matmul(jacob_cart, dq[3*i:3*i+3])
+
       # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
       tau += np.matmul(np.transpose(jacob_cart), np.matmul(kpCartesian, leg_xyz - foot_pos) + np.matmul(kdCartesian, 0 - foot_vel))
 
@@ -142,3 +171,98 @@ for j in range(TEST_STEPS):
 # plt.plot(t,joint_pos[1,:], label='FR thigh')
 # plt.legend()
 # plt.show()
+
+colors = np.array(["b", "g", "r", "c"])
+
+fig1 = plt.figure("CPG")
+subfigs = fig1.subfigures(2, 2, wspace=0.07)
+
+labels = np.array(["time [s]", "amplitudes []"])
+ax1 = subfigs[0, 0].subplots(4, sharex=True)
+subfigs[0, 0].suptitle("amplitude of oscillators (r)")
+for i, ax in enumerate(ax1):
+    ax.plot(t, r[i, :], label = 'leg' + str(i), color = colors[i])
+    ax.legend()
+# subfigs[0, 0].add_subplot(111, frameon=False)
+# plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+plt.xlabel(labels[0])
+plt.ylabel(labels[1])
+# subfigs[0, 0].tight_layout()
+# plt.grid(True)
+
+labels = np.array(["time [s]", "angles [rad]"])
+ax2 = subfigs[0, 1].subplots(4, sharex=True)
+subfigs[0, 1].suptitle("angles of oscillators (theta)")
+for i, ax in enumerate(ax2):
+    ax.plot(t, theta[i, :], label = 'leg' + str(i), color = colors[i])
+    ax.legend()
+# subfigs[0, 1].add_subplot(111, frameon=False)
+# plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+plt.xlabel(labels[0])
+plt.ylabel(labels[1])
+# subfigs[0, 0].tight_layout()
+# plt.grid(True)
+
+labels = np.array(["time [s]", "derivate of amplitude []"])
+ax3 = subfigs[1, 0].subplots(4, sharex=True)
+subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
+for i, ax in enumerate(ax3):
+    ax.plot(t, rdot[i, :], label = 'leg' + str(i), color = colors[i])
+    ax.legend()
+# subfigs[1, 0].add_subplot(111, frameon=False)
+# plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+plt.xlabel(labels[0])
+plt.ylabel(labels[1])
+# subfigs[0, 0].tight_layout()
+# plt.grid(True)
+
+labels = np.array(["time [s]", "angular velocity [rad/s]"])
+ax4 = subfigs[1, 1].subplots(4, sharex=True)
+subfigs[1, 1].suptitle("Angular velocity (theta dot)")
+for i, ax in enumerate(ax4):
+    ax.plot(t, theta_dot[i, :], label = 'leg' + str(i), color = colors[i])
+    ax.legend()
+# subfigs[1, 1].add_subplot(111, frameon=False)
+# plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+plt.xlabel(labels[0])
+plt.ylabel(labels[1])
+# subfigs[0, 0].tight_layout()
+# plt.grid(True)
+
+
+##### Value comparison between desired and real##################################
+
+fig2 = plt.figure("Comparison values")
+subfigs = fig2.subfigures(1, 2, wspace=0.07)
+
+labels = np.array(["time [s]", "X [m]"])
+labels_positions = np.array(["x", "y", "z"])
+labels_joint = np.array(["hip", "thigh", "calf"])
+ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
+subfigs[0].suptitle("foot positions")
+for i, ax in enumerate(ax1):
+    ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
+    ax.plot(t, act_leg_pos[i, :], label = "actual leg position for " + labels_positions[i], color = "r")
+    ax.legend()
+# subfigs[0].add_subplot(111, frameon=False)
+# plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+plt.xlabel(labels[0])
+plt.ylabel(labels[1])
+# plt.grid(True)
+
+labels = np.array(["time [s]", "?? [??]"])
+ax2 = subfigs[1].subplots(3, sharex=True, sharey= True)
+subfigs[1].suptitle("joint positions")
+for i, ax in enumerate(ax2):
+    ax.plot(t, des_joint_angles[i, :], label="desired joint position for joint " + labels_joint[i])
+    ax.plot(t, act_joint_angles[i, :], label="actual joint positionfor joint " + labels_joint[i], color="r")
+    ax.legend()
+# subfigs[1].add_subplot(111, frameon=False)
+# plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+plt.xlabel(labels[0], loc= 'center')
+plt.ylabel(labels[1], loc= 'center')
+# plt.grid(True)
+
+#####################################################3
+plt.show()
+

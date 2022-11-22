@@ -54,10 +54,12 @@ sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negati
 gait = "TROT"
 
 simulation_time = 10
-number_of_simulations = 3
+number_of_simulations = 2
 TEST_STEPS = int(simulation_time / (TIME_STEP))
 
 avg_vector = np.zeros([number_of_simulations, TEST_STEPS])
+x_pos_vector = np.zeros([number_of_simulations, TEST_STEPS])
+y_pos_vector = np.zeros([number_of_simulations, TEST_STEPS])
 
 for sim in range(number_of_simulations):
     env = QuadrupedGymEnv(render=False,             # visualize
@@ -214,6 +216,7 @@ for sim in range(number_of_simulations):
     ax1.set(xlabel="time [s]", ylabel="speed [m/s]")
     ax1.title.set_text("Instant and mobile averaged horizontal speed")
     ax1.set_box_aspect(0.4)
+    ax1.legend()
 
     # plots the position
     x_scale = 7
@@ -229,13 +232,15 @@ for sim in range(number_of_simulations):
 
     fig_vel_pos.tight_layout()
     avg_vector[sim,:] = avg
+    x_pos_vector[sim, :] = speeds[2, :]
+    y_pos_vector[sim, :] = speeds[3, :]
 
-# plots instant CoT
-# plt.figure()
-# plt.plot(speeds[0, :], speeds[4, :])
-# plt.xlabel("time [s]")
-# plt.ylabel("CoT")
-# plt.title("Instant CoT of robot")
+    # plots instant CoT
+    plt.figure()
+    plt.plot(speeds[0, :], speeds[4, :])
+    plt.xlabel("time [s]")
+    plt.ylabel("CoT")
+    plt.title("Instant CoT of robot")
 ##################################################### 
 # PLOTS
 #####################################################
@@ -320,9 +325,27 @@ for sim in range(number_of_simulations):
     #     ax.legend()
     # plt.xlabel(labels[0], loc= 'center')
 
-#####################################################3
-plt.show()
+####################################################################################################################
+fig, ax = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [2, 1]})
+
 for sim in range(number_of_simulations):
-    plt.plot(avg_vector[sim,:])
+    ax[0].plot(avg_vector[sim,:], label = "average speed for sim " + str(sim))
+    ax[1].plot(x_pos_vector[sim, :], y_pos_vector[sim, :], label = "trajectory for sim " + str(sim))
+
+
+ax[0].set(xlabel="time [s]", ylabel="speed [m/s]")
+ax[0].legend()
+x_scale = 7
+y_scale = 7
+ratio = x_scale/y_scale
+ax[1].set_xlim([-x_scale, x_scale])
+ax[1].set_ylim([-y_scale, y_scale])
+ax[1].set(xlabel="x displacement [m]", ylabel="y displacement [m]", label ="test")
+ax[1].title.set_text("X-Y Trajectory")
+ax[1].set_box_aspect(1/ratio)
+ax[1].legend()
+
+############################################################ plot######################################################
+
 plt.show()
 

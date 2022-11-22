@@ -51,12 +51,16 @@ TIME_STEP = 0.001
 foot_y = 0.0838 # this is the hip length 
 sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
 
-gait = "ROTARY_GALLOP"
+gait = "TROT"
 
 simulation_time = 10
-number_of_simulations = 1
-for _ in range(number_of_simulations):
-    env = QuadrupedGymEnv(render=True,              # visualize
+number_of_simulations = 3
+TEST_STEPS = int(simulation_time / (TIME_STEP))
+
+avg_vector = np.zeros([number_of_simulations, TEST_STEPS])
+
+for sim in range(number_of_simulations):
+    env = QuadrupedGymEnv(render=False,             # visualize
                         on_rack=False,              # useful for debugging!
                         isRLGymInterface=False,     # not using RL
                         time_step=TIME_STEP,
@@ -83,7 +87,7 @@ for _ in range(number_of_simulations):
         cpg = HopfNetwork(time_step=TIME_STEP)
 
 
-    TEST_STEPS = int(simulation_time / (TIME_STEP))
+
     t = np.arange(TEST_STEPS)*TIME_STEP
 
     des_leg_pos = np.zeros((3, TEST_STEPS))
@@ -224,6 +228,7 @@ for _ in range(number_of_simulations):
     ax2.set_box_aspect(1/ratio)
 
     fig_vel_pos.tight_layout()
+    avg_vector[sim,:] = avg
 
 # plots instant CoT
 # plt.figure()
@@ -234,87 +239,90 @@ for _ in range(number_of_simulations):
 ##################################################### 
 # PLOTS
 #####################################################
-
-    colors = np.array(["b", "g", "r", "c"])
-
-    fig1 = plt.figure("CPG")
-    subfigs = fig1.subfigures(2, 2, wspace=0.07)
-
-    labels = np.array(["time [s]", "amplitudes []"])
-    ax1 = subfigs[0, 0].subplots(4, sharex=True)
-    subfigs[0, 0].suptitle("amplitude of oscillators (r)")
-    for i, ax in enumerate(ax1):
-        ax.plot(t, r[i, :], label = 'leg' + str(i), color = colors[i])
-        ax.grid(True)
-        if i == 1:
-            ax.set_ylabel(labels[1], loc="bottom")
-        ax.legend()
-    plt.xlabel(labels[0])
-
-    labels = np.array(["time [s]", "angles [rad]"])
-    ax2 = subfigs[0, 1].subplots(4, sharex=True)
-    subfigs[0, 1].suptitle("angles of oscillators (theta)")
-    for i, ax in enumerate(ax2):
-        ax.plot(t, theta[i, :], label = 'leg' + str(i), color = colors[i])
-        ax.grid(True)
-        if i == 1:
-            ax.set_ylabel(labels[1], loc="bottom")
-        ax.legend()
-    plt.xlabel(labels[0])
-
-    labels = np.array(["time [s]", "derivate of amplitude []"])
-    ax3 = subfigs[1, 0].subplots(4, sharex=True)
-    subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
-    for i, ax in enumerate(ax3):
-        ax.plot(t, rdot[i, :], label = 'leg' + str(i), color = colors[i])
-        ax.grid(True)
-        if i == 1:
-            ax.set_ylabel(labels[1], loc="top")
-        ax.legend()
-    plt.xlabel(labels[0])
-
-    labels = np.array(["time [s]", "angular velocity [rad/s]"])
-    ax4 = subfigs[1, 1].subplots(4, sharex=True)
-    subfigs[1, 1].suptitle("Angular velocity (theta dot)")
-    for i, ax in enumerate(ax4):
-        ax.plot(t, theta_dot[i, :], label = 'leg' + str(i), color = colors[i])
-        ax.grid(True)
-        if i == 1:
-            ax.set_ylabel(labels[1], loc="top")
-        ax.legend()
-    plt.xlabel(labels[0])
-
-    ##### Value comparison between desired and real##################################
-
-    fig2 = plt.figure("Comparison values")
-    subfigs = fig2.subfigures(1, 2, wspace=0.07)
-
-    labels = np.array(["time [s]", "X [m]"])
-    labels_positions = np.array(["x", "y", "z"])
-    labels_joint = np.array(["hip", "thigh", "calf"])
-    ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
-    subfigs[0].suptitle("foot positions")
-    for i, ax in enumerate(ax1):
-        ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
-        ax.plot(t, act_leg_pos[i, :], label = "actual leg position for " + labels_positions[i], color = "r")
-        ax.grid(True)
-        if i == 1:
-            ax.set_ylabel(labels[1])
-        ax.legend()
-    plt.xlabel(labels[0])
-
-    labels = np.array(["time [s]", "joint angle [rad]"])
-    ax2 = subfigs[1].subplots(3, sharex=True, sharey= True)
-    subfigs[1].suptitle("joint positions")
-    for i, ax in enumerate(ax2):
-        ax.plot(t, des_joint_angles[i, :], label="desired joint position for joint " + labels_joint[i])
-        ax.plot(t, act_joint_angles[i, :], label="actual joint positionfor joint " + labels_joint[i], color="r")
-        ax.grid(True)
-        if i == 1:
-            ax.set_ylabel(labels[1])
-        ax.legend()
-    plt.xlabel(labels[0], loc= 'center')
+    #
+    # colors = np.array(["b", "g", "r", "c"])
+    #
+    # fig1 = plt.figure("CPG")
+    # subfigs = fig1.subfigures(2, 2, wspace=0.07)
+    #
+    # labels = np.array(["time [s]", "amplitudes []"])
+    # ax1 = subfigs[0, 0].subplots(4, sharex=True)
+    # subfigs[0, 0].suptitle("amplitude of oscillators (r)")
+    # for i, ax in enumerate(ax1):
+    #     ax.plot(t, r[i, :], label = 'leg' + str(i), color = colors[i])
+    #     ax.grid(True)
+    #     if i == 1:
+    #         ax.set_ylabel(labels[1], loc="bottom")
+    #     ax.legend()
+    # plt.xlabel(labels[0])
+    #
+    # labels = np.array(["time [s]", "angles [rad]"])
+    # ax2 = subfigs[0, 1].subplots(4, sharex=True)
+    # subfigs[0, 1].suptitle("angles of oscillators (theta)")
+    # for i, ax in enumerate(ax2):
+    #     ax.plot(t, theta[i, :], label = 'leg' + str(i), color = colors[i])
+    #     ax.grid(True)
+    #     if i == 1:
+    #         ax.set_ylabel(labels[1], loc="bottom")
+    #     ax.legend()
+    # plt.xlabel(labels[0])
+    #
+    # labels = np.array(["time [s]", "derivate of amplitude []"])
+    # ax3 = subfigs[1, 0].subplots(4, sharex=True)
+    # subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
+    # for i, ax in enumerate(ax3):
+    #     ax.plot(t, rdot[i, :], label = 'leg' + str(i), color = colors[i])
+    #     ax.grid(True)
+    #     if i == 1:
+    #         ax.set_ylabel(labels[1], loc="top")
+    #     ax.legend()
+    # plt.xlabel(labels[0])
+    #
+    # labels = np.array(["time [s]", "angular velocity [rad/s]"])
+    # ax4 = subfigs[1, 1].subplots(4, sharex=True)
+    # subfigs[1, 1].suptitle("Angular velocity (theta dot)")
+    # for i, ax in enumerate(ax4):
+    #     ax.plot(t, theta_dot[i, :], label = 'leg' + str(i), color = colors[i])
+    #     ax.grid(True)
+    #     if i == 1:
+    #         ax.set_ylabel(labels[1], loc="top")
+    #     ax.legend()
+    # plt.xlabel(labels[0])
+    #
+    # ##### Value comparison between desired and real##################################
+    #
+    # fig2 = plt.figure("Comparison values")
+    # subfigs = fig2.subfigures(1, 2, wspace=0.07)
+    #
+    # labels = np.array(["time [s]", "X [m]"])
+    # labels_positions = np.array(["x", "y", "z"])
+    # labels_joint = np.array(["hip", "thigh", "calf"])
+    # ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
+    # subfigs[0].suptitle("foot positions")
+    # for i, ax in enumerate(ax1):
+    #     ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
+    #     ax.plot(t, act_leg_pos[i, :], label = "actual leg position for " + labels_positions[i], color = "r")
+    #     ax.grid(True)
+    #     if i == 1:
+    #         ax.set_ylabel(labels[1])
+    #     ax.legend()
+    # plt.xlabel(labels[0])
+    #
+    # labels = np.array(["time [s]", "joint angle [rad]"])
+    # ax2 = subfigs[1].subplots(3, sharex=True, sharey= True)
+    # subfigs[1].suptitle("joint positions")
+    # for i, ax in enumerate(ax2):
+    #     ax.plot(t, des_joint_angles[i, :], label="desired joint position for joint " + labels_joint[i])
+    #     ax.plot(t, act_joint_angles[i, :], label="actual joint positionfor joint " + labels_joint[i], color="r")
+    #     ax.grid(True)
+    #     if i == 1:
+    #         ax.set_ylabel(labels[1])
+    #     ax.legend()
+    # plt.xlabel(labels[0], loc= 'center')
 
 #####################################################3
+plt.show()
+for sim in range(number_of_simulations):
+    plt.plot(avg_vector[sim,:])
 plt.show()
 

@@ -53,6 +53,14 @@ sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negati
 
 gait = "TROT"
 
+###### plots variable
+plots_speed = "FALSE"
+plot_cpg = "TRUE"
+plot_CoT = "FALSE"
+plot_speed_vector = "FALSE"
+
+#################################
+
 simulation_time = 10
 number_of_simulations = 2
 TEST_STEPS = int(simulation_time / (TIME_STEP))
@@ -192,158 +200,163 @@ for sim in range(number_of_simulations):
 
 
     # plots the speed
-    # Mobile average of the speeds for smoothing
-    avg = np.zeros([TEST_STEPS])
-    n = 500
-    m = 200
-    for i in range(int(n/2), TEST_STEPS):
-        if i < TEST_STEPS-(int(n/2)-1):
-            avg[i] = np.average(speeds[1, int(i-n/2):int(i+n/2)]) #we find the moving average of the n/2 prev and next
-        else:
-            avg[i] = avg[i-1] #to avoid array problems we just copy the precedent value
+    if plots_speed == "TRUE":
+        # Mobile average of the speeds for smoothing
+        avg = np.zeros([TEST_STEPS])
+        n = 500
+        m = 200
+        for i in range(int(n/2), TEST_STEPS):
+            if i < TEST_STEPS-(int(n/2)-1):
+                avg[i] = np.average(speeds[1, int(i-n/2):int(i+n/2)]) #we find the moving average of the n/2 prev and next
+            else:
+                avg[i] = avg[i-1] #to avoid array problems we just copy the precedent value
 
-    print(f"speed after convergence: {avg[-1]}[m/s]")
-    # print(f"Average CoT of the last {m} timesteps{np.average(speeds[4,-m:])} ")
-    # print(f"Total average CoT {np.average(speeds[4,:])} ")
+        print(f"speed after convergence: {avg[-1]}[m/s]")
+        # print(f"Average CoT of the last {m} timesteps{np.average(speeds[4,-m:])} ")
+        # print(f"Total average CoT {np.average(speeds[4,:])} ")
 
 
-    fig_vel_pos, ax = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [2, 1]})
+        fig_vel_pos, ax = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [2, 1]})
 
-    # plots the speed
-    ax1 = ax[0]
-    ax1.plot(speeds[0, :], speeds[1, :], label="instant speed")
-    ax1.plot(speeds[0, :], avg, label=f"instant speed (averaged over {int(n/2)} next and prev values")
-    ax1.set(xlabel=f"time [s]\n speed after convergence: {avg[-1]:.4f}[m/s]", ylabel="speed [m/s]")
-    ax1.title.set_text("Instant and mobile averaged horizontal speed")
-    ax1.set_box_aspect(0.4)
-    ax1.legend()
+        # plots the speed
+        ax1 = ax[0]
+        ax1.plot(speeds[0, :], speeds[1, :], label="instant speed")
+        ax1.plot(speeds[0, :], avg, label=f"instant speed (averaged over {int(n/2)} next and prev values")
+        ax1.set(xlabel=f"time [s]\n speed after convergence: {avg[-1]:.4f}[m/s]", ylabel="speed [m/s]")
+        ax1.title.set_text("Instant and mobile averaged horizontal speed")
+        ax1.set_box_aspect(0.4)
+        ax1.legend()
 
-    # plots the position
-    x_scale = 7
-    y_scale = 7
-    ratio = x_scale/y_scale
-    ax2 = ax[1]
-    ax2.plot(speeds[2, :], speeds[3, :])
-    ax2.set_xlim([-x_scale, x_scale])
-    ax2.set_ylim([-y_scale, y_scale])
-    ax2.set(xlabel="x displacement [m]", ylabel="y displacement [m]", label ="test")
-    ax2.title.set_text("X-Y Trajectory")
-    ax2.set_box_aspect(1/ratio)
+        # plots the position
+        x_scale = 7
+        y_scale = 7
+        ratio = x_scale/y_scale
+        ax2 = ax[1]
+        ax2.plot(speeds[2, :], speeds[3, :])
+        ax2.set_xlim([-x_scale, x_scale])
+        ax2.set_ylim([-y_scale, y_scale])
+        ax2.set(xlabel="x displacement [m]", ylabel="y displacement [m]", label ="test")
+        ax2.title.set_text("X-Y Trajectory")
+        ax2.set_box_aspect(1/ratio)
 
-    fig_vel_pos.tight_layout()
-    avg_vector[sim,:] = avg
-    x_pos_vector[sim, :] = speeds[2, :]
-    y_pos_vector[sim, :] = speeds[3, :]
+        fig_vel_pos.tight_layout()
+        avg_vector[sim,:] = avg
+        x_pos_vector[sim, :] = speeds[2, :]
+        y_pos_vector[sim, :] = speeds[3, :]
 
     # plots instant CoT
-    plt.figure()
-    plt.plot(speeds[0, :], speeds[4, :])
-    plt.xlabel("time [s]")
-    plt.ylabel("CoT")
-    plt.title("Instant CoT of robot")
+    if plot_CoT == "TRUE":
+        plt.figure()
+        plt.plot(speeds[0, :], speeds[4, :])
+        plt.xlabel("time [s]")
+        plt.ylabel("CoT")
+        plt.title("Instant CoT of robot")
 ##################################################### 
 # PLOTS
 #####################################################
-    #
-    # colors = np.array(["b", "g", "r", "c"])
-    #
-    # fig1 = plt.figure("CPG")
-    # subfigs = fig1.subfigures(2, 2, wspace=0.07)
-    #
-    # labels = np.array(["time [s]", "amplitudes []"])
-    # ax1 = subfigs[0, 0].subplots(4, sharex=True)
-    # subfigs[0, 0].suptitle("amplitude of oscillators (r)")
-    # for i, ax in enumerate(ax1):
-    #     ax.plot(t, r[i, :], label = 'leg' + str(i), color = colors[i])
-    #     ax.grid(True)
-    #     if i == 1:
-    #         ax.set_ylabel(labels[1], loc="bottom")
-    #     ax.legend()
-    # plt.xlabel(labels[0])
-    #
-    # labels = np.array(["time [s]", "angles [rad]"])
-    # ax2 = subfigs[0, 1].subplots(4, sharex=True)
-    # subfigs[0, 1].suptitle("angles of oscillators (theta)")
-    # for i, ax in enumerate(ax2):
-    #     ax.plot(t, theta[i, :], label = 'leg' + str(i), color = colors[i])
-    #     ax.grid(True)
-    #     if i == 1:
-    #         ax.set_ylabel(labels[1], loc="bottom")
-    #     ax.legend()
-    # plt.xlabel(labels[0])
-    #
-    # labels = np.array(["time [s]", "derivate of amplitude []"])
-    # ax3 = subfigs[1, 0].subplots(4, sharex=True)
-    # subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
-    # for i, ax in enumerate(ax3):
-    #     ax.plot(t, rdot[i, :], label = 'leg' + str(i), color = colors[i])
-    #     ax.grid(True)
-    #     if i == 1:
-    #         ax.set_ylabel(labels[1], loc="top")
-    #     ax.legend()
-    # plt.xlabel(labels[0])
-    #
-    # labels = np.array(["time [s]", "angular velocity [rad/s]"])
-    # ax4 = subfigs[1, 1].subplots(4, sharex=True)
-    # subfigs[1, 1].suptitle("Angular velocity (theta dot)")
-    # for i, ax in enumerate(ax4):
-    #     ax.plot(t, theta_dot[i, :], label = 'leg' + str(i), color = colors[i])
-    #     ax.grid(True)
-    #     if i == 1:
-    #         ax.set_ylabel(labels[1], loc="top")
-    #     ax.legend()
-    # plt.xlabel(labels[0])
-    #
-    # ##### Value comparison between desired and real##################################
-    #
-    # fig2 = plt.figure("Comparison values")
-    # subfigs = fig2.subfigures(1, 2, wspace=0.07)
-    #
-    # labels = np.array(["time [s]", "X [m]"])
-    # labels_positions = np.array(["x", "y", "z"])
-    # labels_joint = np.array(["hip", "thigh", "calf"])
-    # ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
-    # subfigs[0].suptitle("foot positions")
-    # for i, ax in enumerate(ax1):
-    #     ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
-    #     ax.plot(t, act_leg_pos[i, :], label = "actual leg position for " + labels_positions[i], color = "r")
-    #     ax.grid(True)
-    #     if i == 1:
-    #         ax.set_ylabel(labels[1])
-    #     ax.legend()
-    # plt.xlabel(labels[0])
-    #
-    # labels = np.array(["time [s]", "joint angle [rad]"])
-    # ax2 = subfigs[1].subplots(3, sharex=True, sharey= True)
-    # subfigs[1].suptitle("joint positions")
-    # for i, ax in enumerate(ax2):
-    #     ax.plot(t, des_joint_angles[i, :], label="desired joint position for joint " + labels_joint[i])
-    #     ax.plot(t, act_joint_angles[i, :], label="actual joint positionfor joint " + labels_joint[i], color="r")
-    #     ax.grid(True)
-    #     if i == 1:
-    #         ax.set_ylabel(labels[1])
-    #     ax.legend()
-    # plt.xlabel(labels[0], loc= 'center')
+    if plot_cpg == "TRUE":
+        colors = np.array(["b", "g", "r", "c"])
+
+        # fig = plt.figure("CPG")
+        fig = plt.figure()
+        subfigs = fig.subfigures(2, 2, wspace=0.07)
+
+        labels = np.array(["time [s]", "amplitudes []"])
+        ax1 = subfigs[0, 0].subplots(4, sharex=True)
+        subfigs[0, 0].suptitle("amplitude of oscillators (r)")
+        for i, ax in enumerate(ax1):
+            ax.plot(t, r[i, :], label = 'leg' + str(i), color = colors[i])
+            ax.grid(True)
+            if i == 1:
+                ax.set_ylabel(labels[1], loc="bottom")
+            ax.legend()
+        plt.xlabel(labels[0])
+
+        labels = np.array(["time [s]", "angles [rad]"])
+        ax2 = subfigs[0, 1].subplots(4, sharex=True)
+        subfigs[0, 1].suptitle("angles of oscillators (theta)")
+        for i, ax in enumerate(ax2):
+            ax.plot(t, theta[i, :], label = 'leg' + str(i), color = colors[i])
+            ax.grid(True)
+            if i == 1:
+                ax.set_ylabel(labels[1], loc="bottom")
+            ax.legend()
+        plt.xlabel(labels[0])
+
+        labels = np.array(["time [s]", "derivate of amplitude []"])
+        ax3 = subfigs[1, 0].subplots(4, sharex=True)
+        subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
+        for i, ax in enumerate(ax3):
+            ax.plot(t, rdot[i, :], label = 'leg' + str(i), color = colors[i])
+            ax.grid(True)
+            if i == 1:
+                ax.set_ylabel(labels[1], loc="top")
+            ax.legend()
+        plt.xlabel(labels[0])
+
+        labels = np.array(["time [s]", "angular velocity [rad/s]"])
+        ax4 = subfigs[1, 1].subplots(4, sharex=True)
+        subfigs[1, 1].suptitle("Angular velocity (theta dot)")
+        for i, ax in enumerate(ax4):
+            ax.plot(t, theta_dot[i, :], label = 'leg' + str(i), color = colors[i])
+            ax.grid(True)
+            if i == 1:
+                ax.set_ylabel(labels[1], loc="top")
+            ax.legend()
+        plt.xlabel(labels[0])
+
+        ##### Value comparison between desired and real##################################
+
+        # fig = plt.figure("Comparison values")
+        fig = plt.figure()
+        subfigs = fig.subfigures(1, 2, wspace=0.07)
+
+        labels = np.array(["time [s]", "X [m]"])
+        labels_positions = np.array(["x", "y", "z"])
+        labels_joint = np.array(["hip", "thigh", "calf"])
+        ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
+        subfigs[0].suptitle("foot positions")
+        for i, ax in enumerate(ax1):
+            ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
+            ax.plot(t, act_leg_pos[i, :], label = "actual leg position for " + labels_positions[i], color = "r")
+            ax.grid(True)
+            if i == 1:
+                ax.set_ylabel(labels[1])
+            ax.legend()
+        plt.xlabel(labels[0])
+
+        labels = np.array(["time [s]", "joint angle [rad]"])
+        ax2 = subfigs[1].subplots(3, sharex=True, sharey= True)
+        subfigs[1].suptitle("joint positions")
+        for i, ax in enumerate(ax2):
+            ax.plot(t, des_joint_angles[i, :], label="desired joint position for joint " + labels_joint[i])
+            ax.plot(t, act_joint_angles[i, :], label="actual joint positionfor joint " + labels_joint[i], color="r")
+            ax.grid(True)
+            if i == 1:
+                ax.set_ylabel(labels[1])
+            ax.legend()
+        plt.xlabel(labels[0], loc= 'center')
 
 ####################################################################################################################
-fig, ax = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [2, 1]})
+if plot_speed_vector == "TRUE":
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [2, 1]})
 
-for sim in range(number_of_simulations):
-    ax[0].plot(avg_vector[sim,:], label = "average speed for sim " + str(sim))
-    ax[1].plot(x_pos_vector[sim, :], y_pos_vector[sim, :], label = "trajectory for sim " + str(sim))
+    for sim in range(number_of_simulations):
+        ax[0].plot(avg_vector[sim,:], label = "average speed for sim " + str(sim))
+        ax[1].plot(x_pos_vector[sim, :], y_pos_vector[sim, :], label = "trajectory for sim " + str(sim))
 
 
-ax[0].set(xlabel="time [s]", ylabel="speed [m/s]")
-ax[0].legend()
-x_scale = 7
-y_scale = 7
-ratio = x_scale/y_scale
-ax[1].set_xlim([-x_scale, x_scale])
-ax[1].set_ylim([-y_scale, y_scale])
-ax[1].set(xlabel="x displacement [m]", ylabel="y displacement [m]", label ="test")
-ax[1].title.set_text("X-Y Trajectory")
-ax[1].set_box_aspect(1/ratio)
-ax[1].legend()
+    ax[0].set(xlabel="time [s]", ylabel="speed [m/s]")
+    ax[0].legend()
+    x_scale = 7
+    y_scale = 7
+    ratio = x_scale/y_scale
+    ax[1].set_xlim([-x_scale, x_scale])
+    ax[1].set_ylim([-y_scale, y_scale])
+    ax[1].set(xlabel="x displacement [m]", ylabel="y displacement [m]", label ="test")
+    ax[1].title.set_text("X-Y Trajectory")
+    ax[1].set_box_aspect(1/ratio)
+    ax[1].legend()
 
 ############################################################ plot######################################################
 

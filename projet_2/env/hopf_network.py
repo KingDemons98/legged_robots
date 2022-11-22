@@ -80,7 +80,8 @@ class HopfNetwork():
     self._set_gait(gait)
 
     # set oscillator initial conditions  
-    self.X[0,:] = np.random.rand(4) * .1
+    # self.X[0,:] = np.random.rand(4) * .1
+    self.X[0,:] = np.ones((4)) * 0.1
     self.X[1,:] = self.PHI[0,:] 
 
     # save body and foot shaping
@@ -126,7 +127,7 @@ class HopfNetwork():
     elif gait == "ROTARY_GALLOP":
       self.PHI = self.PHI_rotary_gallop
     else:
-      raise ValueError( gait + 'not implemented.')
+      raise ValueError( gait + ' not implemented.')
 
 
   def update(self):
@@ -188,7 +189,7 @@ class HopfNetwork():
       X_dot[:,i] = [r_dot, theta_dot]
 
     # integrate 
-    self.X = X + X_dot * self._dt
+    self.X = X + (X_dot + X_dot_prev) * self._dt / 2
     self.X_dot = X_dot
     # mod phase variables to keep between 0 and 2pi
     self.X[1,:] = self.X[1,:] % (2*np.pi)

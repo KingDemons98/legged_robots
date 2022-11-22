@@ -54,15 +54,15 @@ sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negati
 gait = "TROT"
 
 ###### plots variable
-plots_speed = "FALSE"
-plot_cpg = "TRUE"
-plot_CoT = "FALSE"
-plot_speed_vector = "FALSE"
+plots_speed = False
+plot_cpg = True
+plot_CoT = False
+plot_speed_vector = False
 
 #################################
 
 simulation_time = 10
-number_of_simulations = 2
+number_of_simulations = 4
 TEST_STEPS = int(simulation_time / (TIME_STEP))
 
 avg_vector = np.zeros([number_of_simulations, TEST_STEPS])
@@ -71,7 +71,7 @@ y_pos_vector = np.zeros([number_of_simulations, TEST_STEPS])
 
 for sim in range(number_of_simulations):
     env = QuadrupedGymEnv(render=False,             # visualize
-                        on_rack=False,              # useful for debugging!
+                        on_rack=True,              # useful for debugging!
                         isRLGymInterface=False,     # not using RL
                         time_step=TIME_STEP,
                         action_repeat=1,
@@ -200,7 +200,7 @@ for sim in range(number_of_simulations):
 
 
     # plots the speed
-    if plots_speed == "TRUE":
+    if plots_speed:
         # Mobile average of the speeds for smoothing
         avg = np.zeros([TEST_STEPS])
         n = 500
@@ -245,7 +245,7 @@ for sim in range(number_of_simulations):
         y_pos_vector[sim, :] = speeds[3, :]
 
     # plots instant CoT
-    if plot_CoT == "TRUE":
+    if plot_CoT:
         plt.figure()
         plt.plot(speeds[0, :], speeds[4, :])
         plt.xlabel("time [s]")
@@ -254,7 +254,7 @@ for sim in range(number_of_simulations):
 ##################################################### 
 # PLOTS
 #####################################################
-    if plot_cpg == "TRUE":
+    if plot_cpg:
         colors = np.array(["b", "g", "r", "c"])
 
         # fig = plt.figure("CPG")
@@ -314,7 +314,8 @@ for sim in range(number_of_simulations):
         labels = np.array(["time [s]", "X [m]"])
         labels_positions = np.array(["x", "y", "z"])
         labels_joint = np.array(["hip", "thigh", "calf"])
-        ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
+        # ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
+        ax1 = subfigs[0].subplots(3, 1, sharex=True)
         subfigs[0].suptitle("foot positions")
         for i, ax in enumerate(ax1):
             ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
@@ -326,7 +327,8 @@ for sim in range(number_of_simulations):
         plt.xlabel(labels[0])
 
         labels = np.array(["time [s]", "joint angle [rad]"])
-        ax2 = subfigs[1].subplots(3, sharex=True, sharey= True)
+        # ax2 = subfigs[1].subplots(3, sharex=True, sharey= True)
+        ax2 = subfigs[1].subplots(3, sharex=True)
         subfigs[1].suptitle("joint positions")
         for i, ax in enumerate(ax2):
             ax.plot(t, des_joint_angles[i, :], label="desired joint position for joint " + labels_joint[i])
@@ -338,7 +340,7 @@ for sim in range(number_of_simulations):
         plt.xlabel(labels[0], loc= 'center')
 
 ####################################################################################################################
-if plot_speed_vector == "TRUE":
+if plot_speed_vector:
     fig, ax = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [2, 1]})
 
     for sim in range(number_of_simulations):

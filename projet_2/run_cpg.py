@@ -213,7 +213,7 @@ for sim in range(number_of_simulations):
     ax1 = ax[0]
     ax1.plot(speeds[0, :], speeds[1, :], label="instant speed")
     ax1.plot(speeds[0, :], avg, label=f"instant speed (averaged over {int(n/2)} next and prev values")
-    ax1.set(xlabel="time [s]", ylabel="speed [m/s]")
+    ax1.set(xlabel=f"time [s]\n speed after convergence: {avg[-1]:.4f}[m/s]", ylabel="speed [m/s]")
     ax1.title.set_text("Instant and mobile averaged horizontal speed")
     ax1.set_box_aspect(0.4)
     ax1.legend()

@@ -235,10 +235,7 @@ class HopfNetwork():
       # amplitude (use mu from RL, i.e. self._mu_rl[i])
       r_dot = self._alpha * (self._mu_rl[i] - r **2) * r
       # phase (use omega from RL, i.e. self._omega_rl[i])
-      theta_dot = self._mu_rl[i]
-      if self._couple:
-        for j in range(len(X[0, :])):
-          theta_dot += X[0, j] * self._coupling_strength * np.sin(X[1, j] - theta - self.PHI[i][j])
+      theta_dot = self._omega_rl[i]
 
 
       X_dot[:,i] = [r_dot, theta_dot]

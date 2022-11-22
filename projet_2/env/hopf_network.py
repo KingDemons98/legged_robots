@@ -107,11 +107,13 @@ class HopfNetwork():
     self.PHI_walk = np.zeros((4,4))
     self.PHI_bound = np.zeros((4,4))
     self.PHI_pace = np.zeros((4,4))
+    self.PHI_rotary_gallop = np.zeros((4, 4))
 
     self.PHI_trot = np.array([[0.0, 0.5, 0.5, 0.0], [0.5, 0.0, 0.0, 0.5], [0.5, 0.0, 0.0, 0.5], [0.0, 0.5, 0.5, 0.0]]) * 2 * np.pi
     self.PHI_walk = np.array([[0.0, 0.5, -0.25, 0.25], [0.5, 0.0, 0.25, 0.75], [0.25, -0.25, 0.0, 0.5], [-0.25, -0.75, 0.5, 0.0]]) * 2 * np.pi
     self.PHI_bound = np.array([[0.0, 0.0, 0.5, 0.5], [0.0, 0.0, 0.5, 0.5], [0.5, 0.5, 0.0, 0.0], [0.5, 0.5, 0.0, 0.0]]) * 2 * np.pi
     self.PHI_pace = np.array([[0.0, 0.5, 0.0, 0.5], [0.5, 0.0, 0.5, 0.0], [0.0, 0.5, 0.0, 0.5], [0.5, 0.5, 0.0, 0.0]]) * 2 * np.pi
+    self.PHI_rotary_gallop = np.array([[0.0, 0.1, -0.4, -0.5], [-0.1, 0.0, -0.5, -0.6], [0.4, 0.5, 0.0, -0.1], [0.5, 0.6, 0.1, 0.0]]) * 2 * np.pi
 
     if gait == "TROT":
       self.PHI = self.PHI_trot
@@ -121,6 +123,8 @@ class HopfNetwork():
       self.PHI = self.PHI_bound
     elif gait == "WALK":
       self.PHI = self.PHI_walk
+    elif gait == "ROTARY_GALLOP":
+      self.PHI = self.PHI_rotary_gallop
     else:
       raise ValueError( gait + 'not implemented.')
 

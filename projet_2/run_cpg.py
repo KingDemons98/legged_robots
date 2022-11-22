@@ -51,12 +51,12 @@ TIME_STEP = 0.001
 foot_y = 0.0838 # this is the hip length 
 sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
 
-gait = "TROT"
+gait = "ROTARY_GALLOP"
 
-simulation_time = 2
+simulation_time = 10
 number_of_simulations = 1
 for _ in range(number_of_simulations):
-    env = QuadrupedGymEnv(render=False,              # visualize
+    env = QuadrupedGymEnv(render=True,              # visualize
                         on_rack=False,              # useful for debugging!
                         isRLGymInterface=False,     # not using RL
                         time_step=TIME_STEP,
@@ -76,6 +76,8 @@ for _ in range(number_of_simulations):
         cpg = HopfNetwork(time_step=TIME_STEP, gait="WALK", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
     elif(gait == "PACE"):
         cpg = HopfNetwork(time_step=TIME_STEP, gait="PACE", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
+    elif(gait == "ROTARY_GALLOP"):
+        cpg = HopfNetwork(time_step=TIME_STEP, gait="ROTARY_GALLOP", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
     else:
         print("error: gait not supported, using the default one")
         cpg = HopfNetwork(time_step=TIME_STEP)

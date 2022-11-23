@@ -217,7 +217,7 @@ class QuadrupedGymEnv(gym.Env):
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0] * 4),
-                                         )) - OBSERVATION_EPS)
+                                         self._cpg.)) - OBSERVATION_EPS)
     else:
       raise ValueError("observation space not defined or not intended")
 

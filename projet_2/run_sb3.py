@@ -57,8 +57,8 @@ USE_GPU = True # make sure to install all necessary drivers
 env_configs = {}
 
 if USE_GPU and LEARNING_ALG=="SAC":
-    # gpu_arg = "auto"
-    gpu_arg = "gpu"
+    gpu_arg = "auto"
+    # gpu_arg = "cuda"
 else:
     gpu_arg = "cpu"
 

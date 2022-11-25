@@ -54,11 +54,18 @@ USE_GPU = True # make sure to install all necessary drivers
 # env_configs = {"motor_control_mode":"CPG",
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "LR_COURSE_OBS"}
-env_configs = {}
+
+######## test for CPG RL
+env_configs = {"motor_control_mode": "CPG",
+               "observation_space_mode": "CPG_RL",
+               "task_env" : "FWD_LOCOMOTION"
+               }
+###########################################
+# env_configs = {}
+
 
 if USE_GPU and LEARNING_ALG=="SAC":
     gpu_arg = "auto"
-    # gpu_arg = "cuda"
 else:
     gpu_arg = "cpu"
 

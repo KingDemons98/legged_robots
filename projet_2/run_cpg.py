@@ -62,7 +62,7 @@ plot_speed_vector = False
 #################################
 
 simulation_time = 10
-number_of_simulations = 4
+number_of_simulations = 1
 TEST_STEPS = int(simulation_time / (TIME_STEP))
 
 avg_vector = np.zeros([number_of_simulations, TEST_STEPS])
@@ -83,7 +83,7 @@ for sim in range(number_of_simulations):
         # initialize Hopf Network, supply gait
     if(gait == "TROT"):
         cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT", omega_swing=8.88 * 2 * np.pi, omega_stance=3.29 * 2 * np.pi,
-                          alpha=30, ground_clearance=0.079, ground_penetration=0.01, robot_height=0.31, des_step_len=0.09)
+                          alpha=50, ground_clearance=0.079, ground_penetration=0.01, robot_height=0.31, des_step_len=0.09)
     elif(gait == "BOUND"):
         cpg = HopfNetwork(time_step=TIME_STEP, gait="BOUND", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
     elif(gait == "WALK"):

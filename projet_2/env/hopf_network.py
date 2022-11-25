@@ -80,8 +80,8 @@ class HopfNetwork():
     self._set_gait(gait)
 
     # set oscillator initial conditions  
-    # self.X[0,:] = np.random.rand(4) * .1
-    self.X[0,:] = np.ones((4)) * 0.1
+    self.X[0,:] = np.random.rand(4) * .1
+    # self.X[0,:] = np.ones((4)) * 0.1
     self.X[1,:] = self.PHI[0,:] 
 
     # save body and foot shaping

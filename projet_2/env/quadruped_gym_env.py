@@ -210,14 +210,24 @@ class QuadrupedGymEnv(gym.Env):
       observation_high = (np.zeros(50) + OBSERVATION_EPS)
       observation_low = (np.zeros(50) -  OBSERVATION_EPS)
     elif self._observation_space_mode == "CPG_RL":
+      rdot_max = 2 * self._cpg._alpha * (MU_UPP/3) ** (3/2)                         # calcul fait a la main mais mouais pas sur du tout
+
       observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
                                           self._robot_config.VELOCITY_LIMITS,
-                                          np.array([1.0] * 4),
+                                          np.array([1.0] * 4),                        #
+                                          np.array([1.0] * 4),                        # limit for r
+                                          np.array([rdot_max] * 4),                   # limit for rdot a changer) TODO
+                                          np.array([2 * np.pi] * 4),                  # limit for theta
+                                          np.array([4.5] * 4),                        # limit for theta dot (a changer) TODO
                                           )) + OBSERVATION_EPS)
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0] * 4),
-                                         self._cpg.)) - OBSERVATION_EPS)
+                                         np.array([0.0] * 4),                         # limit for r
+                                         np.array([0.0] * 4),                         # limit for rdot a changer)
+                                         np.array([0.0] * 4),                         # limit for theta
+                                         np.array([1.0] * 4),                         # limit for theta dot (a changer) TODO
+                                         )) - OBSERVATION_EPS)
     else:
       raise ValueError("observation space not defined or not intended")
 
@@ -251,7 +261,10 @@ class QuadrupedGymEnv(gym.Env):
       self._observation = np.concatenate((self.robot.GetMotorAngles(),
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation(),
-                                          ))
+                                          self._cpg.get_r(),
+                                          self._cpg.get_dr(),
+                                          self._cpg.get_theta(),
+                                          self._cpg.get_dtheta()))
     else:
       raise ValueError("observation space not defined or not intended")
 
@@ -422,7 +435,9 @@ class QuadrupedGymEnv(gym.Env):
       # call inverse kinematics to get corresponding joint angles
       q_des = self.robot.ComputeInverseKinematics(i, np.array([x, y, z]))
       # Add joint PD contribution to tau
-      tau = kp * (q_des - q[3*i:3*i+3]) + kd * (0 - dq[3*i:3*i+3])
+      # print(f' kp size is {kp[3*i:3*i+3]} and kd shape is {kd[3*i:3*i+3]}')
+      # print(f'q des shape is {q_des.shape}, q shape is {q[3*i:3*i+3].shape}, dq shape is {dq[3*i:3*i+3].shape}')
+      tau = kp[3*i:3*i+3] * (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] * (0 - dq[3*i:3*i+3])
 
       # add Cartesian PD contribution (as you wish)
       # tau_cart = self.ScaleActionToCartesianPos(action)

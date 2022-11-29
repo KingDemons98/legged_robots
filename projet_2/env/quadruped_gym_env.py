@@ -210,12 +210,12 @@ class QuadrupedGymEnv(gym.Env):
       observation_high = (np.zeros(50) + OBSERVATION_EPS)
       observation_low = (np.zeros(50) - OBSERVATION_EPS)
     elif self._observation_space_mode == "CPG_RL":
-      rdot_max = 2 * self._cpg._alpha * (MU_UPP/3) ** (3/2)                         # calcul fait a la main mais mouais pas sur du tout
+      rdot_max = 2 * self._cpg._alpha * (MU_UPP**2/3) ** (3/2)                         # calcul fait a la main mais mouais pas sur du tout
 
       observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
                                           self._robot_config.VELOCITY_LIMITS,
                                           np.array([1.0] * 4),                        #
-                                          np.array([np.sqrt(self._cpg._mu_rl)] * 4),                        # limit for r TODO c est pas forcement 1 c est la racine de mu
+                                          np.array([MU_UPP] * 4),                     # limit for r TODO c est pas forcement 1 c est la racine de mu
                                           np.array([rdot_max] * 4),                   # limit for rdot a changer) TODO
                                           np.array([2 * np.pi] * 4),                  # limit for theta
                                           np.array([4.5] * 4),                        # limit for theta dot (a changer) TODO
@@ -331,7 +331,7 @@ class QuadrupedGymEnv(gym.Env):
     vel_tracking_reward_x = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[0] - des_vel_x) ** 2)
     vel_tracking_reward_y = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[1] - des_vel_y) ** 2)
     # minimize yaw (go straight)
-    yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) #peut etre a enlever ? TODO
+    # yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) #peut etre a enlever ? TODO
     yaw_rate_reward = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseAngularVelocity()[2] - des_vel_yaw) ** 2)
     # don't drift laterally
     drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1])                 #peut etre a enlever ? TODO

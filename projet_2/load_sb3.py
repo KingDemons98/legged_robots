@@ -57,6 +57,9 @@ from utils.file_utils import get_latest_model, load_all_results
 LEARNING_ALG = "SAC"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
+# log_dir = interm_dir + '112622123152'
+# log_dir = interm_dir + 'cpg_rl_112622182216'
+# log_dir = interm_dir + 'cpg_rl_112722122109'
 log_dir = interm_dir + 'cpg_rl_112822072518'
 
 # initialize env configs (render at test time)

@@ -46,7 +46,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 
 LEARNING_ALG = "SAC" # or "SAC"
-LOAD_NN = True # if you want to initialize training with a previous model
+LOAD_NN = False # if you want to initialize training with a previous model
 NUM_ENVS = 20    # how many pybullet environments to create for data collection
 USE_GPU = True # make sure to install all necessary drivers
 
@@ -82,13 +82,11 @@ os.makedirs(SAVE_PATH, exist_ok=True)
 checkpoint_callback = CheckpointCallback(save_freq=20000//NUM_ENVS, save_path=SAVE_PATH, name_prefix='rl_model', verbose=2)
 # create Vectorized gym environment
 env = lambda: QuadrupedGymEnv(**env_configs)  
-env = make_vec_env(env, monitor_dir=SAVE_PATH,n_envs=NUM_ENVS)
+env = make_vec_env(env, monitor_dir=SAVE_PATH, n_envs=NUM_ENVS)
 # normalize observations to stabilize learning (why?)
 env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=100.)
 
 if LOAD_NN:
-    env = lambda: QuadrupedGymEnv(**env_configs)
-    env = make_vec_env(env, n_envs=NUM_ENVS)
     env = VecNormalize.load(stats_path, env)
 
 # Multi-layer perceptron (MLP) policy of two layers of size _,_ 
@@ -144,10 +142,10 @@ if LOAD_NN:
     print("\nLoaded model", model_name, "\n")
 
 # Learn and save (may need to train for longer)
-model.learn(total_timesteps=1000000, log_interval=1,callback=checkpoint_callback)
+model.learn(total_timesteps=1000000, log_interval=1, callback=checkpoint_callback)
 # Don't forget to save the VecNormalize statistics when saving the agent
-model.save( os.path.join(SAVE_PATH, "rl_model" ) ) 
-env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl" )) 
+model.save(os.path.join(SAVE_PATH, "rl_model") )
+env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl"))
 if LEARNING_ALG == "SAC": # save replay buffer 
-    model.save_replay_buffer(os.path.join(SAVE_PATH,"off_policy_replay_buffer"))
+    model.save_replay_buffer(os.path.join(SAVE_PATH, "off_policy_replay_buffer"))
 

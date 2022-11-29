@@ -47,7 +47,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 LEARNING_ALG = "SAC" # or "SAC"
 LOAD_NN = False # if you want to initialize training with a previous model                   #HERE HERE HERE
-NUM_ENVS = 20    # how many pybullet environments to create for data collection
+NUM_ENVS = 10    # how many pybullet environments to create for data collection
 USE_GPU = True  # make sure to install all necessary drivers
 
 # after implementing, you will want to test how well the agent learns with your MDP: 
@@ -58,7 +58,7 @@ USE_GPU = True  # make sure to install all necessary drivers
 ######## test for CPG RL
 env_configs = {"motor_control_mode": "CPG",
                "observation_space_mode": "CPG_RL",
-               "task_env" : "FWD_LOCOMOTION"
+               "task_env" : "LR_COURSE_TASK"
                }
 ###########################################
 # env_configs = {}
@@ -90,6 +90,7 @@ if LOAD_NN:
     env = VecNormalize.load(stats_path, env)
 else:
     env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=100.)
+
 # Multi-layer perceptron (MLP) policy of two layers of size _,_ 
 policy_kwargs = dict(net_arch=[256,256])
 # What are these hyperparameters? Check here: https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html

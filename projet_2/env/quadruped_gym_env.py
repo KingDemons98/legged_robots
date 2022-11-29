@@ -89,6 +89,12 @@ MAX_FWD_VELOCITY = 1  # to avoid exploiting simulator dynamics, cap max reward f
 MU_LOW = 1
 MU_UPP = 2
 
+# Max base velocities
+VX_MAX = 30
+VY_MAX = 30
+VZ_MAX = 2
+
+
 
 class QuadrupedGymEnv(gym.Env):
   """The gym environment for a quadruped {Unitree A1}.
@@ -215,18 +221,20 @@ class QuadrupedGymEnv(gym.Env):
       observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
                                           self._robot_config.VELOCITY_LIMITS,
                                           np.array([1.0] * 4),                        #
-                                          np.array([MU_UPP] * 4),                     # limit for r TODO c est pas forcement 1 c est la racine de mu
-                                          np.array([rdot_max] * 4),                   # limit for rdot a changer) TODO
+                                          np.array([VX_MAX, VY_MAX, VZ_MAX]),     # base velocities
+                                          np.array([MU_UPP] * 4),                     # limit for r
+                                          np.array([rdot_max] * 4),                   # limit for rdot
                                           np.array([2 * np.pi] * 4),                  # limit for theta
-                                          np.array([4.5] * 4),                        # limit for theta dot (a changer) TODO
+                                          np.array([4.5] * 4),                        # limit for theta dot
                                           )) + OBSERVATION_EPS)
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0] * 4),
+                                         np.array([-VX_MAX, -VY_MAX, -VZ_MAX]),   # base velocities
                                          np.array([0.0] * 4),                         # limit for r
                                          np.array([0.0] * 4),                         # limit for rdot a changer)
                                          np.array([0.0] * 4),                         # limit for theta
-                                         np.array([0.0] * 4),                         # limit for theta dot (a changer) TODO
+                                         np.array([0.0] * 4),                         # limit for theta dot
                                          )) - OBSERVATION_EPS)
     else:
       raise ValueError("observation space not defined or not intended")
@@ -261,6 +269,7 @@ class QuadrupedGymEnv(gym.Env):
       self._observation = np.concatenate((self.robot.GetMotorAngles(),
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation(),
+                                          self.robot.GetBaseLinearVelocity(),
                                           self._cpg.get_r(),
                                           self._cpg.get_dr(),
                                           self._cpg.get_theta(),
@@ -328,13 +337,19 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self, des_vel_x = 0.5, des_vel_y = 0.0, des_vel_yaw = 0.0):
     """ Implement your reward function here. How will you improve upon the above? """
     # TODO: finish the reward function, more opti for cpg
-    vel_tracking_reward_x = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[0] - des_vel_x) ** 2)
-    vel_tracking_reward_y = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[1] - des_vel_y) ** 2)
+    vel_tracking_reward_x = 0.09 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[0] - des_vel_x) ** 2)
     # minimize yaw (go straight)
-    # yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) #peut etre a enlever ? TODO
-    yaw_rate_reward = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseAngularVelocity()[2] - des_vel_yaw) ** 2)
+    if des_vel_yaw == 0.0:
+        yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2])
+    else:
+        yaw_reward = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseAngularVelocity()[2] - des_vel_yaw) ** 2)
     # don't drift laterally
-    drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1])                 #peut etre a enlever ? TODO
+    if des_vel_y == 0.0:
+        drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1])
+        vel_tracking_reward_y = 0
+    else:
+        vel_tracking_reward_y = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[1] - des_vel_y) ** 2)
+        drift_reward = 0
     # minimize energy
     energy_reward = 0
     for tau, vel in zip(self._dt_motor_torques, self._dt_motor_velocities):
@@ -342,7 +357,7 @@ class QuadrupedGymEnv(gym.Env):
 
     reward = vel_tracking_reward_x \
              + vel_tracking_reward_y \
-             + yaw_rate_reward \
+             + yaw_reward \
              + drift_reward \
              - 0.01 * energy_reward \
              - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0, 0, 0, 1]))

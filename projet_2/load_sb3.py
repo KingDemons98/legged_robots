@@ -74,7 +74,7 @@ env_config['add_noise'] = False
 ############################################### CPG_RL ##########################################################
 env_config['motor_control_mode'] = "CPG"
 env_config['observation_space_mode'] = "CPG_RL"
-env_config['task_env'] = "FWD_LOCOMOTION"
+env_config['task_env'] = "LR_COURSE_TASK"
 #################################################################################################################
 
 # get latest model and normalization stats, and plot 

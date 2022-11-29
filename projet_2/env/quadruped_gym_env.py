@@ -343,7 +343,6 @@ class QuadrupedGymEnv(gym.Env):
     reward = vel_tracking_reward_x \
              + vel_tracking_reward_y \
              + yaw_rate_reward \
-             + yaw_reward \
              + drift_reward \
              - 0.01 * energy_reward \
              - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0, 0, 0, 1]))

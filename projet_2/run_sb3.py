@@ -46,9 +46,9 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 
 LEARNING_ALG = "SAC" # or "SAC"
-LOAD_NN = False # if you want to initialize training with a previous model
+LOAD_NN = True # if you want to initialize training with a previous model                   #HERE HERE HERE
 NUM_ENVS = 20    # how many pybullet environments to create for data collection
-USE_GPU = True # make sure to install all necessary drivers
+USE_GPU = True  # make sure to install all necessary drivers
 
 # after implementing, you will want to test how well the agent learns with your MDP: 
 # env_configs = {"motor_control_mode":"CPG",
@@ -71,7 +71,7 @@ else:
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'cpg_rl_112822180253'
+    log_dir = interm_dir + 'cpg_rl_112822180253'                # put the name of last model here
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 

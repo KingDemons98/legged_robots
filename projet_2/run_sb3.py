@@ -46,8 +46,8 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 
 LEARNING_ALG = "SAC" # or "SAC"
-LOAD_NN = False # if you want to initialize training with a previous model 
-NUM_ENVS = 1    # how many pybullet environments to create for data collection
+LOAD_NN = True # if you want to initialize training with a previous model
+NUM_ENVS = 20    # how many pybullet environments to create for data collection
 USE_GPU = True # make sure to install all necessary drivers
 
 # after implementing, you will want to test how well the agent learns with your MDP: 
@@ -71,15 +71,15 @@ else:
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + '' # add path
+    log_dir = interm_dir + 'cpg_rl_112822180253'
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-SAVE_PATH = './logs/intermediate_models/'+ datetime.now().strftime("%m%d%y%H%M%S") + '/'
+SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
-checkpoint_callback = CheckpointCallback(save_freq=30000, save_path=SAVE_PATH,name_prefix='rl_model', verbose=2)
+checkpoint_callback = CheckpointCallback(save_freq=20000//NUM_ENVS, save_path=SAVE_PATH, name_prefix='rl_model', verbose=2)
 # create Vectorized gym environment
 env = lambda: QuadrupedGymEnv(**env_configs)  
 env = make_vec_env(env, monitor_dir=SAVE_PATH,n_envs=NUM_ENVS)
@@ -87,7 +87,7 @@ env = make_vec_env(env, monitor_dir=SAVE_PATH,n_envs=NUM_ENVS)
 env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=100.)
 
 if LOAD_NN:
-    env = lambda: QuadrupedGymEnv()
+    env = lambda: QuadrupedGymEnv(**env_configs)
     env = make_vec_env(env, n_envs=NUM_ENVS)
     env = VecNormalize.load(stats_path, env)
 

@@ -54,11 +54,10 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
-
 LEARNING_ALG = "SAC"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
-log_dir = interm_dir + '112522173202'
+log_dir = interm_dir + 'cpg_rl_112822072518'
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
@@ -68,12 +67,19 @@ env_config['record_video'] = False
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
 
+
+############################################### CPG_RL ##########################################################
+env_config['motor_control_mode'] = "CPG"
+env_config['observation_space_mode'] = "CPG_RL"
+env_config['task_env'] = "FWD_LOCOMOTION"
+#################################################################################################################
+
 # get latest model and normalization stats, and plot 
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
 model_name = get_latest_model(log_dir)
 monitor_results = load_results(log_dir)
 print(monitor_results)
-plot_results([log_dir] , 10e10, 'timesteps', LEARNING_ALG + ' ')
+plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
 plt.show() 
 
 # reconstruct env 

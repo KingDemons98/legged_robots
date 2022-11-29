@@ -199,23 +199,23 @@ class QuadrupedGymEnv(gym.Env):
     if self._observation_space_mode == "DEFAULT":
       observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
                                          self._robot_config.VELOCITY_LIMITS,
-                                         np.array([1.0]*4))) +  OBSERVATION_EPS)
+                                         np.array([1.0]*4))) + OBSERVATION_EPS)
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
-                                         np.array([-1.0]*4))) -  OBSERVATION_EPS)
+                                         np.array([-1.0]*4))) - OBSERVATION_EPS)
     elif self._observation_space_mode == "LR_COURSE_OBS":
       # [TODO] Set observation upper and lower ranges. What are reasonable limits? 
       # Note 50 is arbitrary below, you may have more or less
       # if using CPG-RL, remember to include limits on these
       observation_high = (np.zeros(50) + OBSERVATION_EPS)
-      observation_low = (np.zeros(50) -  OBSERVATION_EPS)
+      observation_low = (np.zeros(50) - OBSERVATION_EPS)
     elif self._observation_space_mode == "CPG_RL":
       rdot_max = 2 * self._cpg._alpha * (MU_UPP/3) ** (3/2)                         # calcul fait a la main mais mouais pas sur du tout
 
       observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
                                           self._robot_config.VELOCITY_LIMITS,
                                           np.array([1.0] * 4),                        #
-                                          np.array([1.0] * 4),                        # limit for r
+                                          np.array([np.sqrt(self._cpg._mu_rl)] * 4),                        # limit for r TODO c est pas forcement 1 c est la racine de mu
                                           np.array([rdot_max] * 4),                   # limit for rdot a changer) TODO
                                           np.array([2 * np.pi] * 4),                  # limit for theta
                                           np.array([4.5] * 4),                        # limit for theta dot (a changer) TODO
@@ -226,7 +226,7 @@ class QuadrupedGymEnv(gym.Env):
                                          np.array([0.0] * 4),                         # limit for r
                                          np.array([0.0] * 4),                         # limit for rdot a changer)
                                          np.array([0.0] * 4),                         # limit for theta
-                                         np.array([1.0] * 4),                         # limit for theta dot (a changer) TODO
+                                         np.array([0.0] * 4),                         # limit for theta dot (a changer) TODO
                                          )) - OBSERVATION_EPS)
     else:
       raise ValueError("observation space not defined or not intended")
@@ -282,7 +282,7 @@ class QuadrupedGymEnv(gym.Env):
   ######################################################################################
   # Termination and reward
   ######################################################################################
-  def is_fallen(self,dot_prod_min=0.85):
+  def is_fallen(self, dot_prod_min=0.85):
     """Decide whether the quadruped has fallen.
 
     If the up directions between the base and the world is larger (the dot
@@ -306,34 +306,54 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_fwd_locomotion(self, des_vel_x=0.5):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity 
-    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
+    vel_tracking_reward = 0.05 * np.exp(-1/0.25 * (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
     # minimize yaw (go straight)
     yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
     # don't drift laterally 
     drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1]) 
     # minimize energy 
     energy_reward = 0 
-    for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
-      energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
+    for tau, vel in zip(self._dt_motor_torques, self._dt_motor_velocities):
+        energy_reward += np.abs(np.dot(tau, vel)) * self._time_step
 
     reward = vel_tracking_reward \
             + yaw_reward \
             + drift_reward \
             - 0.01 * energy_reward \
-            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
+            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0, 0, 0, 1]))
 
-    return max(reward,0) # keep rewards positive
+    return max(reward, 0) # keep rewards positive
 
 
-  def _reward_lr_course(self):
+  def _reward_lr_course(self, des_vel_x = 0.5, des_vel_y = 0.0, des_vel_yaw = 0.0):
     """ Implement your reward function here. How will you improve upon the above? """
-    # [TODO] add your reward function. 
-    return 0
+    # TODO: finish the reward function, more opti for cpg
+    vel_tracking_reward_x = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[0] - des_vel_x) ** 2)
+    vel_tracking_reward_y = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[1] - des_vel_y) ** 2)
+    # minimize yaw (go straight)
+    yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) #peut etre a enlever ? TODO
+    yaw_rate_reward = 0.05 * np.exp(-1 / 0.25 * (self.robot.GetBaseAngularVelocity()[2] - des_vel_yaw) ** 2)
+    # don't drift laterally
+    drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1])                 #peut etre a enlever ? TODO
+    # minimize energy
+    energy_reward = 0
+    for tau, vel in zip(self._dt_motor_torques, self._dt_motor_velocities):
+        energy_reward += np.abs(np.dot(tau, vel)) * self._time_step
+
+    reward = vel_tracking_reward_x \
+             + vel_tracking_reward_y \
+             + yaw_rate_reward \
+             + yaw_reward \
+             + drift_reward \
+             - 0.01 * energy_reward \
+             - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0, 0, 0, 1]))
+
+    return max(reward, 0)  # keep rewards positive
 
   def _reward(self):
     """ Get reward depending on task"""
     if self._TASK_ENV == "FWD_LOCOMOTION":
-      return self._reward_fwd_locomotion()
+      return self._reward_fwd_locomotion(des_vel_x=0.8)
     elif self._TASK_ENV == "LR_COURSE_TASK":
       return self._reward_lr_course()
     else:
@@ -367,7 +387,7 @@ class QuadrupedGymEnv(gym.Env):
     Edit ranges, limits etc., but make sure to use Cartesian PD to compute the torques. 
     """
     # clip RL actions to be between -1 and 1 (standard RL technique)
-    u = np.clip(actions,-1,1)
+    u = np.clip(actions, -1, 1)
     # scale to corresponding desired foot positions (i.e. ranges in x,y,z we allow the agent to choose foot positions)
     # [TODO: edit (do you think these should these be increased? How limiting is this?)]
     scale_array = np.array([0.1, 0.05, 0.08]*4)
@@ -398,21 +418,21 @@ class QuadrupedGymEnv(gym.Env):
 
     return action
 
-  def ScaleActionToCPGStateModulations(self,actions):
+  def ScaleActionToCPGStateModulations(self, actions):
     """Scale RL action to CPG modulation parameters."""
     # clip RL actions to be between -1 and 1 (standard RL technique)
-    u = np.clip(actions,-1,1)
+    u = np.clip(actions, -1, 1)
 
     # scale omega to ranges, and set in CPG (range is an example)
     omega = self._scale_helper( u[0:4], 5, 4.5*2*np.pi)
     self._cpg.set_omega_rl(omega)
 
     # scale mu to ranges, and set in CPG (squared since we converge to the sqrt in the CPG amplitude)
-    mus = self._scale_helper( u[4:8], MU_LOW**2, MU_UPP**2)
+    mus = self._scale_helper(u[4:8], MU_LOW**2, MU_UPP**2)
     self._cpg.set_mu_rl(mus)
 
     # integrate CPG, get mapping to foot positions
-    xs,zs = self._cpg.update()
+    xs, zs = self._cpg.update()
 
     # IK parameters
     foot_y = self._robot_config.HIP_LINK_LENGTH
@@ -440,8 +460,8 @@ class QuadrupedGymEnv(gym.Env):
       tau = kp[3*i:3*i+3] * (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] * (0 - dq[3*i:3*i+3])
 
       # add Cartesian PD contribution (as you wish)
-      # tau_cart = self.ScaleActionToCartesianPos(action)
-      # tau += tau_cart[3*i:3*i+3]
+      tau_cart = self.ScaleActionToCartesianPos(action)
+      tau += tau_cart[3*i:3*i+3]
 
       action[3*i:3*i+3] = tau
 

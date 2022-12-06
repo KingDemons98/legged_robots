@@ -1,0 +1,58 @@
+diff --git a/projet_2/run_sb3.py b/projet_2/run_sb3.py
+index 5e88516..d05d3ba 100644
+--- a/projet_2/run_sb3.py
++++ b/projet_2/run_sb3.py
+@@ -44,6 +44,10 @@ from utils.file_utils import get_latest_model
+ # gym environment
+ from env.quadruped_gym_env import QuadrupedGymEnv
+ 
++import wandb
++from wandb.integration.sb3 import WandbCallback
++
++
+ 
+ LEARNING_ALG = "SAC" # or "SAC"
+ LOAD_NN = False # if you want to initialize training with a previous model                   #HERE HERE HERE
+@@ -63,6 +67,15 @@ env_configs = {"motor_control_mode": "CPG",
+ ###########################################
+ # env_configs = {}
+ 
++run = wandb.init(
++    project="legTest1",
++    entity="leggedbois",
++    config=env_configs,
++    sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
++    monitor_gym=True,  # auto-upload the videos of agents playing the game
++    save_code=True,
++    )# optional)
++
+ 
+ if USE_GPU and LEARNING_ALG=="SAC":
+     gpu_arg = "auto"
+@@ -108,7 +121,7 @@ ppo_config = {  "gamma":0.99,
+                 "clip_range":0.2, 
+                 "clip_range_vf":1,
+                 "verbose":1, 
+-                "tensorboard_log":None, 
++                "tensorboard_log":f"runs/{run.id}",
+                 "_init_setup_model":True, 
+                 "policy_kwargs":policy_kwargs,
+                 "device": gpu_arg}
+@@ -124,7 +137,7 @@ sac_config={"learning_rate":1e-4,
+             "gradient_steps":1,
+             "learning_starts": 10000,
+             "verbose":1, 
+-            "tensorboard_log":None,
++            "tensorboard_log":f"runs/{run.id}",
+             "policy_kwargs": policy_kwargs,
+             "seed":None, 
+             "device": gpu_arg}
+@@ -144,7 +157,7 @@ if LOAD_NN:
+     print("\nLoaded model", model_name, "\n")
+ 
+ # Learn and save (may need to train for longer)
+-model.learn(total_timesteps=1000000, log_interval=1, callback=checkpoint_callback)
++model.learn(total_timesteps=1000000, log_interval=1, callback=WandbCallback(gradient_save_freq=1000, model_save_path=SAVE_PATH, verbose=2))
+ # Don't forget to save the VecNormalize statistics when saving the agent
+ model.save(os.path.join(SAVE_PATH, "rl_model") )
+ env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl"))

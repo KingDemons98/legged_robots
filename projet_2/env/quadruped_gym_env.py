@@ -425,7 +425,7 @@ class QuadrupedGymEnv(gym.Env):
       return self._reward_fwd_locomotion(des_vel_x=0.8)
     elif self._TASK_ENV == "LR_COURSE_TASK":
       # return self._reward_lr_course(des_vel_x=1.5)
-      return self._reward_lr_course(des_vel_y=0.5)
+      return self._reward_lr_course(des_vel_x=0.5)
     elif self._TASK_ENV == "TEST":
       return self._reward_lr_test(des_vel_x=1.0)
     else:
@@ -437,7 +437,7 @@ class QuadrupedGymEnv(gym.Env):
   def _transform_action_to_motor_command(self, action):
     """ Map actions from RL (i.e. in [-1,1]) to joint commands based on motor_control_mode. """
     # clip actions to action bounds
-    action = np.clip(action, -self._action_bound - ACTION_EPS,self._action_bound + ACTION_EPS)
+    action = np.clip(action, -self._action_bound - ACTION_EPS, self._action_bound + ACTION_EPS)
     if self._motor_control_mode == "PD":
       action = self._scale_helper(action, self._robot_config.LOWER_ANGLE_JOINT, self._robot_config.UPPER_ANGLE_JOINT)
       action = np.clip(action, self._robot_config.LOWER_ANGLE_JOINT, self._robot_config.UPPER_ANGLE_JOINT)
@@ -520,7 +520,8 @@ class QuadrupedGymEnv(gym.Env):
 ################################ params for cartesian ##################################################################
     scale_array = np.array([0.1, 0.05, 0.08] * 4)
     # add to nominal foot position in leg frame (what are the final ranges?)
-    des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array * u
+    # des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array * u            ## TODO a verifier comment cette ligne peut etre adaptée
+    des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME
     # get Cartesian kp and kd gains (can be modified)
     kpCartesian = self._robot_config.kpCartesian
     kdCartesian = self._robot_config.kdCartesian
@@ -552,7 +553,7 @@ class QuadrupedGymEnv(gym.Env):
       # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
       tau_cart = np.matmul(np.transpose(J), np.matmul(kpCartesian, Pd - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
 
-      tau += tau_cart[3*i:3*i+3]
+      tau += tau_cart
 ########################################################################################################################
       action[3*i:3*i+3] = tau
 

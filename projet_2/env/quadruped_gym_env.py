@@ -367,7 +367,7 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_test(self, des_vel_x = 0.0, des_vel_y = 0.0, des_vel_yaw = 0.0):
     """ Implement your reward function here. How will you improve upon the above? """
     # TODO: finish the reward function, more opti for cpg
-    dt= 0.01
+    dt = 0.01
     # minimize energy
     energy_reward = 0
     for tau, vel in zip(self._dt_motor_torques, self._dt_motor_velocities):
@@ -380,7 +380,7 @@ class QuadrupedGymEnv(gym.Env):
     roll_penalty = -0.05 * dt * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[0])
     pitch_penalty = -0.05 * dt * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[1])
     # joint_motion_penalty = -0.001 * dt * (np.abs(self.robot.) + np.abs(self.robot.)) #TODO get the derivative and second derivative for joints
-    # feet_air_time = self.robot.     #TODO avoir les air time des jambes
+    # feet_air_time = self.robot.GetContactInfo()     #TODO avoir les air time des jambes
 
     reward = vel_tracking_reward_x \
              + vel_tracking_reward_y \
@@ -389,7 +389,7 @@ class QuadrupedGymEnv(gym.Env):
              + vel_z_penalty \
              + roll_penalty \
              + pitch_penalty \
-             - 0.01 * energy_reward \
+             - 0.1 * dt * energy_reward \
              - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0, 0, 0, 1]))
 
     return max(reward, 0)  # keep rewards positive
@@ -579,6 +579,7 @@ class QuadrupedGymEnv(gym.Env):
         ground_mu_k = mu_min+(1-mu_min)*np.random.random()
         self._ground_mu_k = ground_mu_k
         self._pybullet_client.changeDynamics(self.plane, -1, lateralFriction=ground_mu_k)
+        # self._add_base_mass_offset()
         if self._is_render:
           print('ground friction coefficient is', ground_mu_k)
 

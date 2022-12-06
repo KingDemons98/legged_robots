@@ -452,7 +452,7 @@ class QuadrupedGymEnv(gym.Env):
     new_a = lower_lim + 0.5 * (action + 1) * (upper_lim - lower_lim)
     return np.clip(new_a, lower_lim, upper_lim)
 
-  def ScaleActionToCartesianPos(self,actions):
+  def ScaleActionToCartesianPos(self, actions):
     """Scale RL action to Cartesian PD ranges. 
     Edit ranges, limits etc., but make sure to use Cartesian PD to compute the torques. 
     """

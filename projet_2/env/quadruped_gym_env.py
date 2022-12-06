@@ -239,8 +239,10 @@ class QuadrupedGymEnv(gym.Env):
                                           np.array([5.0] * 3),                     # base angular velocities
                                           np.array([MU_UPP+1] * 4),                     # limit for r
                                           np.array([rdot_max+1] * 4),                   # limit for rdot
-                                          np.array([2 * np.pi+0.1] * 4),                  # limit for theta
-                                          np.array([4.5+0.1] * 4),                        # limit for theta dot
+                                          np.array([2 * np.pi+0.1] * 4),                # limit for theta
+                                          np.array([4.5*2*np.pi + 0.1] * 4),            # limit for theta dot
+                                          np.array([2 * np.pi+0.1] * 4),                # limit for phi
+                                          np.array([1.5*2*np.pi + 0.1] * 4)             # limit for phi dot
                                           )) + OBSERVATION_EPS)
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
@@ -252,6 +254,8 @@ class QuadrupedGymEnv(gym.Env):
                                          np.array([-1.0] * 4),                         # limit for rdot a changer)
                                          np.array([-1.0] * 4),                         # limit for theta
                                          np.array([-1.0] * 4),                         # limit for theta dot
+                                         np.array([-1.0] * 4),                         # limit for phi
+                                         np.array([-1.5 * 2 * np.pi - 0.1] * 4)        # limit for phi dot
                                          )) - OBSERVATION_EPS)
     else:
       raise ValueError("observation space not defined or not intended")
@@ -263,7 +267,7 @@ class QuadrupedGymEnv(gym.Env):
     if self._motor_control_mode in ["PD","TORQUE", "CARTESIAN_PD"]:
       action_dim = 12
     elif self._motor_control_mode in ["CPG"]:
-      action_dim = 8
+      action_dim = 12
     else:
       raise ValueError("motor control mode " + self._motor_control_mode + " not implemented yet.")
     action_high = np.array([1] * action_dim)
@@ -298,7 +302,10 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_r(),
                                           self._cpg.get_dr(),
                                           self._cpg.get_theta(),
-                                          self._cpg.get_dtheta()))
+                                          self._cpg.get_dtheta(),
+                                          self._cpg.get_phi(),
+                                          self._cpg.get_dphi()
+                                          ))
     else:
       raise ValueError("observation space not defined or not intended")
 
@@ -494,15 +501,18 @@ class QuadrupedGymEnv(gym.Env):
     u = np.clip(actions, -1, 1)
 
     # scale omega to ranges, and set in CPG (range is an example)
-    omega = self._scale_helper(u[0:4], 5, 4.5*2*np.pi)
+    omega = self._scale_helper(u[0:4], 0, 4.5*2*np.pi)
     self._cpg.set_omega_rl(omega)
 
     # scale mu to ranges, and set in CPG (squared since we converge to the sqrt in the CPG amplitude)
     mus = self._scale_helper(u[4:8], MU_LOW**2, MU_UPP**2)
     self._cpg.set_mu_rl(mus)
 
+    psis = self._scale_helper(u[8:12], -1.5*2*np.pi, 1.5*2*np.pi)
+    self._cpg.set_psi_rl(psis)
+
     # integrate CPG, get mapping to foot positions
-    xs, zs = self._cpg.update()
+    xs, ys, zs = self._cpg.update()
 
     # IK parameters
     foot_y = self._robot_config.HIP_LINK_LENGTH
@@ -530,7 +540,8 @@ class QuadrupedGymEnv(gym.Env):
     for i in range(4):
       # get desired foot i pos (xi, yi, zi)
       x = xs[i]
-      y = sideSign[i] * foot_y # careful of sign
+      # y = sideSign[i] * foot_y # careful of sign
+      y = ys[i]
       z = zs[i]
 
       # call inverse kinematics to get corresponding joint angles

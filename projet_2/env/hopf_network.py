@@ -66,8 +66,12 @@ class HopfNetwork():
     
     ###############
     # initialize CPG data structures: amplitude is row 0, and phase is row 1
-    self.X = np.zeros((2,4))
-    self.X_dot = np.zeros((2,4))
+    if use_RL:
+      self.X = np.zeros((3, 4))
+      self.X_dot = np.zeros((3, 4))
+    else:
+      self.X = np.zeros((2, 4))
+      self.X_dot = np.zeros((2, 4))
 
     # save parameters 
     self._mu = mu
@@ -82,7 +86,9 @@ class HopfNetwork():
     # set oscillator initial conditions  
     self.X[0,:] = np.random.rand(4) * .1
     # self.X[0,:] = np.ones((4)) * 0.1
-    self.X[1,:] = self.PHI[0,:] 
+    self.X[1,:] = self.PHI[0,:]
+    if use_RL:
+      self.X[2, :] = np.random.rand(4) * .001#TODO init this
 
     # save body and foot shaping
     self._ground_clearance = ground_clearance 
@@ -93,7 +99,8 @@ class HopfNetwork():
     # for RL
     self.use_RL = use_RL
     self._omega_rl = np.zeros(4)
-    self._mu_rl = np.zeros(4) 
+    self._mu_rl = np.zeros(4)
+    self._psi_rl = np.zeros(4)
     self._max_step_len_rl = max_step_len_rl
     if use_RL:
       self.X[0,:] = MU_LOW # mapping MU_LOW=1 to MU_UPP=2
@@ -141,11 +148,21 @@ class HopfNetwork():
     
     # map CPG variables to Cartesian foot xz positions (Equations 8, 9) 
     x = np.zeros(4)
+    y = np.zeros(4)
     z = np.zeros(4)
+    if self.use_RL:
+      r = np.clip(self.X[0, :], MU_LOW, MU_UPP)
+
     for i in range(len(self.X[0])):
-      r = self.X[0, i]
       theta = self.X[1, i]
-      x[i] = -self._des_step_len * r * np.cos(theta)
+      if self.use_RL:
+        phi = self.X[2, i]
+        x[i] = -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.cos(phi)
+        y[i] = -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
+
+      else:
+        r = self.X[0, i]
+        x[i] = -self._des_step_len * r * np.cos(theta)
       if np.sin(theta) > 0.0:
         z[i] = -self._robot_height + self._ground_clearance * np.sin(theta)
       else:
@@ -158,7 +175,7 @@ class HopfNetwork():
     else:
       # RL uses amplitude to set max step length
       r = np.clip(self.X[0,:],MU_LOW,MU_UPP) 
-      return -self._max_step_len_rl * (r - MU_LOW) * np.cos(self.X[1,:]), z
+      return x, y, z
 
       
         
@@ -212,6 +229,12 @@ class HopfNetwork():
     """ Get CPG phase derivatives (theta_dot) """
     return self.X_dot[1,:]
 
+  def get_phi(self):
+    return self.X[2, :]
+
+  def get_dphi(self):
+    return self.X_dot[2, :]
+
   ###################### Functions for setting parameters for RL
   def set_omega_rl(self, omegas):
     """ Set intrinisc frequencies. """
@@ -221,24 +244,28 @@ class HopfNetwork():
     """ Set intrinsic amplitude setpoints. """
     self._mu_rl = mus
 
+  def set_psi_rl(self, psis):
+    self._psi_rl = psis
   def _integrate_hopf_equations_rl(self):
     """ Hopf polar equations and integration, using quantities set by RL """
     # bookkeeping - save copies of current CPG states 
     X = self.X.copy()
     X_dot_prev = self.X_dot.copy() 
-    X_dot = np.zeros((2,4))
+    X_dot = np.zeros((3,4))
 
     # loop through each leg's oscillator, find current velocities
     for i in range(4):
       # get r_i, theta_i from X
-      r, theta = X[:,i]
+      r, theta, phi = X[:,i]
       # amplitude (use mu from RL, i.e. self._mu_rl[i])
       r_dot = self._alpha * (self._mu_rl[i] - r **2) * r
       # phase (use omega from RL, i.e. self._omega_rl[i])
       theta_dot = self._omega_rl[i]
 
+      phi_dot = self._psi_rl[i]
 
-      X_dot[:,i] = [r_dot, theta_dot]
+
+      X_dot[:,i] = [r_dot, theta_dot, phi_dot]
 
     # integrate 
     self.X = X + (X_dot_prev + X_dot) * self._dt / 2

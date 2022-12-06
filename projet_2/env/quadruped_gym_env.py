@@ -213,8 +213,21 @@ class QuadrupedGymEnv(gym.Env):
       # [TODO] Set observation upper and lower ranges. What are reasonable limits? 
       # Note 50 is arbitrary below, you may have more or less
       # if using CPG-RL, remember to include limits on these
-      observation_high = (np.zeros(50) + OBSERVATION_EPS)
-      observation_low = (np.zeros(50) - OBSERVATION_EPS)
+      observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
+                                          self._robot_config.VELOCITY_LIMITS,
+                                          np.array([1.0] * 4),
+                                          np.array([VX_MAX, VY_MAX, VZ_MAX]),  # base velocities
+                                          np.array([1.1] * 4),                # foot contact positions
+                                          np.array([5.0] * 3)                 # base angular velocities
+                                          )) + OBSERVATION_EPS)
+
+      observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
+                                         -self._robot_config.VELOCITY_LIMITS,
+                                         np.array([-1.0] * 4),
+                                         np.array([-VX_MAX, -VY_MAX, -VZ_MAX]),  # base velocities
+                                         np.array([-1.0] * 4),                    # foot contact positions
+                                         np.array([-5.0] * 3)                     # base angular velocities
+                                         )) - OBSERVATION_EPS)
     elif self._observation_space_mode == "CPG_RL":
       rdot_max = 2 * self._cpg._alpha * (MU_UPP**2/3) ** (3/2)                         # calcul fait a la main mais mouais pas sur du tout
 
@@ -222,19 +235,19 @@ class QuadrupedGymEnv(gym.Env):
                                           self._robot_config.VELOCITY_LIMITS,
                                           np.array([1.0] * 4),                        #
                                           np.array([VX_MAX, VY_MAX, VZ_MAX]),     # base velocities
-                                          np.array([MU_UPP] * 4),                     # limit for r
-                                          np.array([rdot_max] * 4),                   # limit for rdot
-                                          np.array([2 * np.pi] * 4),                  # limit for theta
-                                          np.array([4.5] * 4),                        # limit for theta dot
+                                          np.array([MU_UPP+1] * 4),                     # limit for r
+                                          np.array([rdot_max+1] * 4),                   # limit for rdot
+                                          np.array([2 * np.pi+0.1] * 4),                  # limit for theta
+                                          np.array([4.5+0.1] * 4),                        # limit for theta dot
                                           )) + OBSERVATION_EPS)
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0] * 4),
                                          np.array([-VX_MAX, -VY_MAX, -VZ_MAX]),   # base velocities
-                                         np.array([0.0] * 4),                         # limit for r
-                                         np.array([0.0] * 4),                         # limit for rdot a changer)
-                                         np.array([0.0] * 4),                         # limit for theta
-                                         np.array([0.0] * 4),                         # limit for theta dot
+                                         np.array([-1.0] * 4),                         # limit for r
+                                         np.array([-1.0] * 4),                         # limit for rdot a changer)
+                                         np.array([-1.0] * 4),                         # limit for theta
+                                         np.array([-1.0] * 4),                         # limit for theta dot
                                          )) - OBSERVATION_EPS)
     else:
       raise ValueError("observation space not defined or not intended")
@@ -264,7 +277,13 @@ class QuadrupedGymEnv(gym.Env):
       # [TODO] Get observation from robot. What are reasonable measurements we could get on hardware?
       # if using the CPG, you can include states with self._cpg.get_r(), for example
       # 50 is arbitrary
-      self._observation = np.zeros(50)
+      self._observation = np.concatenate((self.robot.GetMotorAngles(),
+                                          self.robot.GetMotorVelocities(),
+                                          self.robot.GetBaseOrientation(),
+                                          self.robot.GetBaseLinearVelocity(),
+                                          self.robot.GetContactInfo()[3],
+                                          self.robot.GetBaseAngularVelocity()
+                                          ))
     elif self._observation_space_mode == "CPG_RL":
       self._observation = np.concatenate((self.robot.GetMotorAngles(),
                                           self.robot.GetMotorVelocities(),

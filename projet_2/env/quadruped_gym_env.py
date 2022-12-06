@@ -398,14 +398,12 @@ class QuadrupedGymEnv(gym.Env):
     for tau, vel in zip(self._dt_motor_torques, self._dt_motor_velocities):
         energy_reward += np.abs(np.dot(tau, vel)) * self._time_step
 
-    vel_tracking_reward_x = dt * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[0] - des_vel_x) ** 2)
-    vel_tracking_reward_y = dt * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[1] - des_vel_y) ** 2)
+    vel_tracking_reward_x = 0.75 * dt * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[0] - des_vel_x) ** 2)
+    vel_tracking_reward_y = 0.75 * dt * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[1] - des_vel_y) ** 2)
     yaw_reward = 0.5 * dt * np.exp(-1 / 0.25 * (self.robot.GetBaseAngularVelocity()[2] - des_vel_yaw) ** 2)
-    vel_z_penalty = -4 * dt * self.robot.GetBaseLinearVelocity()[2] ** 2
+    vel_z_penalty = -2 * dt * self.robot.GetBaseLinearVelocity()[2] ** 2
     roll_penalty = -0.05 * dt * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[0])
     pitch_penalty = -0.05 * dt * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[1])
-    # joint_motion_penalty = -0.001 * dt * (np.abs(self.robot.) + np.abs(self.robot.)) #TODO get the derivative and second derivative for joints
-    # feet_air_time = self.robot.GetContactInfo()     #TODO avoir les air time des jambes
 
     reward = vel_tracking_reward_x \
              + vel_tracking_reward_y \
@@ -414,8 +412,8 @@ class QuadrupedGymEnv(gym.Env):
              + vel_z_penalty \
              + roll_penalty \
              + pitch_penalty \
-             - 0.1 * dt * energy_reward \
-             - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0, 0, 0, 1]))
+             - 0.001 * dt * energy_reward \
+             - 0.01 * dt * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0, 0, 0, 1]))
 
     return max(reward, 0)  # keep rewards positive
 

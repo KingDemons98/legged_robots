@@ -601,7 +601,7 @@ class QuadrupedGymEnv(gym.Env):
           numSolverIterations=int(self._num_bullet_solver_iterations))
       self._pybullet_client.setTimeStep(self._time_step)
       self.plane = self._pybullet_client.loadURDF(pybullet_data.getDataPath()+"/plane.urdf", 
-                                                  basePosition=[80,0,0]) # to extend available running space (shift)
+                                                  basePosition=[80, 0, 0]) # to extend available running space (shift)
       self._pybullet_client.changeVisualShape(self.plane, -1, rgbaColor=[1, 1, 1, 0.9])
       self._pybullet_client.configureDebugVisualizer(
           self._pybullet_client.COV_ENABLE_PLANAR_REFLECTION, 0)

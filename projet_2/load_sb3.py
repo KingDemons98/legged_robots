@@ -87,7 +87,7 @@ else:
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '112622123152'
 # log_dir = interm_dir + 'cpg_rl_120122090257'                #supposed to work but already a t 1.5?
-log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is the last one with 1.0
+# log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is the last one with 1.0
 # log_dir = interm_dir + 'cpg_rl_112822072518'
 # log_dir = interm_dir + 'cpg_rl_test_env120622075011'            #test avec obstacles en train
 # log_dir = interm_dir + 'cpg_rl_120522113944'
@@ -95,7 +95,7 @@ log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is
 # log_dir = interm_dir + 'cpg_rl_120422141008'            # new reward fct
 
 
-# log_dir = interm_dir + 'cpg_rl_120322171241'            #test with in y, might work
+log_dir = interm_dir + 'CPG_120622181738'            #test with in y, might work
 
 
 

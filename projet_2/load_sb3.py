@@ -55,12 +55,7 @@ from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
 LEARNING_ALG = "SAC"
-interm_dir = "./logs/intermediate_models/"
-# path to saved models, i.e. interm_dir + '121321105810'
-# log_dir = interm_dir + '112622123152'
-# log_dir = interm_dir + 'cpg_rl_112622182216'
-log_dir = interm_dir + 'cpg_rl_112722122109'
-# log_dir = interm_dir + 'cpg_rl_112822072518'
+
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
@@ -68,22 +63,52 @@ env_config = {}
 env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
-# env_config['competition_env'] = True
+env_config['competition_env'] = True            #### SET COMPET ENV HERE
+# env_config['test_env'] = True
 
+motor_control_mode = "CPG"                   ##### SET MOTOR CONTROL HERE
 
 ############################################### CPG_RL ##########################################################
-env_config['motor_control_mode'] = "CPG"
+env_config['motor_control_mode'] = motor_control_mode
 env_config['observation_space_mode'] = "CPG_RL"
-env_config['task_env'] = "LR_COURSE_TASK"
+env_config['task_env'] = "TEST"
 #################################################################################################################
 
-# get latest model and normalization stats, and plot 
+if motor_control_mode == "CPG":
+    interm_dir = "./logs/intermediate_models_cpg/"
+elif motor_control_mode == "CARTESIAN_PD":
+    interm_dir = "./logs/intermediate_models_cartesian_pd/"
+elif motor_control_mode == "PD":
+    interm_dir = "./logs/intermediate_models_pd/"
+else:
+    interim_dir = "./logs/intermediate_models/"
+
+
+# path to saved models, i.e. interm_dir + '121321105810'
+# log_dir = interm_dir + '112622123152'
+# log_dir = interm_dir + 'cpg_rl_120122090257'                #supposed to work but already a t 1.5?
+log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is the last one with 1.0
+# log_dir = interm_dir + 'cpg_rl_112822072518'
+# log_dir = interm_dir + 'cpg_rl_test_env120622075011'            #test avec obstacles en train
+# log_dir = interm_dir + 'cpg_rl_120522113944'
+
+# log_dir = interm_dir + 'cpg_rl_120422141008'            # new reward fct
+
+
+# log_dir = interm_dir + 'cpg_rl_120322171241'            #test with in y, might work
+
+
+
+
+
+
+# # get latest model and normalization stats, and plot
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
 model_name = get_latest_model(log_dir)
 monitor_results = load_results(log_dir)
 print(monitor_results)
 plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
-plt.show() 
+plt.show()
 
 # reconstruct env 
 env = lambda: QuadrupedGymEnv(**env_config)

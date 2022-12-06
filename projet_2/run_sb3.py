@@ -38,6 +38,9 @@ from datetime import datetime
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.env_util import make_vec_env
+
+import stable_baselines3.common.noise as sb3_noise
+
 # utils
 from utils.utils import CheckpointCallback
 from utils.file_utils import get_latest_model
@@ -55,13 +58,28 @@ USE_GPU = True  # make sure to install all necessary drivers
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "LR_COURSE_OBS"}
 
+
+
+motor_control_mode = "CPG"                          ##### SET MOTOR CONTROL HERE
+
 ######## test for CPG RL
-env_configs = {"motor_control_mode": "CPG",
+env_configs = {"motor_control_mode": motor_control_mode,
                "observation_space_mode": "CPG_RL",
-               "task_env" : "LR_COURSE_TASK"
+               "task_env": "LR_COURSE_TASK",
+               # "test_env": True,
+               # "render": True
                }
 ###########################################
 # env_configs = {}
+
+if motor_control_mode == "CPG":
+    interm_dir = "./logs/intermediate_models_cpg/"
+elif motor_control_mode == "CARTESIAN_PD":
+    interm_dir = "./logs/intermediate_models_cartesian_pd/"
+elif motor_control_mode == "PD":
+    interm_dir = "./logs/intermediate_models_pd/"
+else:
+    interim_dir = "./logs/intermediate_models/"
 
 
 if USE_GPU and LEARNING_ALG=="SAC":
@@ -70,13 +88,14 @@ else:
     gpu_arg = "cpu"
 
 if LOAD_NN:
-    interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'cpg_rl_112822180253'                # put the name of last model here
+    # interm_dir = "./logs/intermediate_models/"
+    log_dir = interm_dir + 'cpg_rl_test_env120522213221'                # put the name of last model here
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
+# SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_test_env' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
+SAVE_PATH = interm_dir + motor_control_mode + "_" + datetime.now().strftime("%m%d%y%H%M%S") + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
 checkpoint_callback = CheckpointCallback(save_freq=20000//NUM_ENVS, save_path=SAVE_PATH, name_prefix='rl_model', verbose=2)
@@ -114,6 +133,9 @@ ppo_config = {  "gamma":0.99,
                 "device": gpu_arg}
 
 # What are these hyperparameters? Check here: https://stable-baselines3.readthedocs.io/en/master/modules/sac.html
+
+# noise = sb3_noise.VectorizedActionNoise(, NUM_ENVS)
+
 sac_config={"learning_rate":1e-4,
             "buffer_size":300000,
             "batch_size":256,

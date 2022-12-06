@@ -235,6 +235,8 @@ class QuadrupedGymEnv(gym.Env):
                                           self._robot_config.VELOCITY_LIMITS,
                                           np.array([1.0] * 4),                        #
                                           np.array([VX_MAX, VY_MAX, VZ_MAX]),     # base velocities
+                                          np.array([1.1] * 4),                     # foot contact positions
+                                          np.array([5.0] * 3),                     # base angular velocities
                                           np.array([MU_UPP+1] * 4),                     # limit for r
                                           np.array([rdot_max+1] * 4),                   # limit for rdot
                                           np.array([2 * np.pi+0.1] * 4),                  # limit for theta
@@ -244,6 +246,8 @@ class QuadrupedGymEnv(gym.Env):
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0] * 4),
                                          np.array([-VX_MAX, -VY_MAX, -VZ_MAX]),   # base velocities
+                                         np.array([-1.0] * 4),                      # foot contact positions
+                                         np.array([-5.0] * 3),                       # base angular velocities
                                          np.array([-1.0] * 4),                         # limit for r
                                          np.array([-1.0] * 4),                         # limit for rdot a changer)
                                          np.array([-1.0] * 4),                         # limit for theta
@@ -289,6 +293,8 @@ class QuadrupedGymEnv(gym.Env):
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation(),
                                           self.robot.GetBaseLinearVelocity(),
+                                          self.robot.GetContactInfo()[3],
+                                          self.robot.GetBaseAngularVelocity(),
                                           self._cpg.get_r(),
                                           self._cpg.get_dr(),
                                           self._cpg.get_theta(),

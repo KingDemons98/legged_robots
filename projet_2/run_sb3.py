@@ -38,6 +38,8 @@ from datetime import datetime
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.env_util import make_vec_env
+import wandb
+from wandb.integration.sb3 import WandbCallback
 
 import stable_baselines3.common.noise as sb3_noise
 
@@ -65,7 +67,7 @@ motor_control_mode = "CPG"                          ##### SET MOTOR CONTROL HERE
 ######## test for CPG RL
 env_configs = {"motor_control_mode": motor_control_mode,
                "observation_space_mode": "CPG_RL",
-               "task_env": "LR_COURSE_TASK",
+               "task_env": "TEST",
                # "test_env": True,
                # "render": True
                }
@@ -89,13 +91,14 @@ else:
 
 if LOAD_NN:
     # interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'cpg_rl_test_env120522213221'                # put the name of last model here
+    log_dir = interm_dir + 'CPG_120922111330'                # put the name of last model here
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
 # SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_test_env' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
-SAVE_PATH = interm_dir + motor_control_mode + "_" + datetime.now().strftime("%m%d%y%H%M%S") + '/'
+NAME = motor_control_mode + "_cart_solve" + datetime.now().strftime("%m%d%y%H%M%S")
+SAVE_PATH = interm_dir + NAME + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
 checkpoint_callback = CheckpointCallback(save_freq=20000//NUM_ENVS, save_path=SAVE_PATH, name_prefix='rl_model', verbose=2)
@@ -109,6 +112,17 @@ if LOAD_NN:
     env = VecNormalize.load(stats_path, env)
 else:
     env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=100.)
+
+run = wandb.init(
+    name=NAME,
+    project="Project legged robots GJJ",
+    config=env_configs,
+    sync_tensorboard=True,
+    monitor_gym=False,
+    save_code=False,
+)
+
+run.config.update({"LOAD_NN":LOAD_NN})
 
 # Multi-layer perceptron (MLP) policy of two layers of size _,_ 
 policy_kwargs = dict(net_arch=[256,256])
@@ -127,7 +141,7 @@ ppo_config = {  "gamma":0.99,
                 "clip_range":0.2, 
                 "clip_range_vf":1,
                 "verbose":1, 
-                "tensorboard_log":None, 
+                "tensorboard_log":f"tensorboard_logs",
                 "_init_setup_model":True, 
                 "policy_kwargs":policy_kwargs,
                 "device": gpu_arg}
@@ -146,15 +160,17 @@ sac_config={"learning_rate":1e-4,
             "gradient_steps":1,
             "learning_starts": 10000,
             "verbose":1, 
-            "tensorboard_log":None,
+            "tensorboard_log":f"tensorboard_logs",
             "policy_kwargs": policy_kwargs,
             "seed":None, 
             "device": gpu_arg}
 
 if LEARNING_ALG == "PPO":
     model = PPO('MlpPolicy', env, **ppo_config)
+    run.config.update(ppo_config)
 elif LEARNING_ALG == "SAC":
     model = SAC('MlpPolicy', env, **sac_config)
+    run.config.update(sac_config)
 else:
     raise ValueError(LEARNING_ALG + 'not implemented')
 
@@ -166,7 +182,7 @@ if LOAD_NN:
     print("\nLoaded model", model_name, "\n")
 
 # Learn and save (may need to train for longer)
-model.learn(total_timesteps=1000000, log_interval=1, callback=checkpoint_callback)
+model.learn(total_timesteps=1000000, log_interval=1, callback=[WandbCallback(), checkpoint_callback])
 # Don't forget to save the VecNormalize statistics when saving the agent
 model.save(os.path.join(SAVE_PATH, "rl_model") )
 env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl"))

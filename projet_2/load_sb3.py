@@ -55,15 +55,22 @@ from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
 LEARNING_ALG = "SAC"
+EPISODE_LENGTH = 10
 
+#plot graphs or not
+##########################################################################
+plot_cpg = True
+plot_foot_pos = True
+plot_speed_pos = True
 
+###########################################################################
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
 env_config = {}
 env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
-env_config['competition_env'] = True            #### SET COMPET ENV HERE
+env_config['competition_env'] = False            #### SET COMPET ENV HERE
 # env_config['test_env'] = True
 
 motor_control_mode = "CPG"                   ##### SET MOTOR CONTROL HERE
@@ -90,15 +97,14 @@ else:
 # log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is the last one with 1.0
 # log_dir = interm_dir + 'cpg_rl_112822072518'
 # log_dir = interm_dir + 'cpg_rl_test_env120622075011'            #test avec obstacles en train
-# log_dir = interm_dir + 'cpg_rl_120522113944'
+# log_dir = interm_dir + 'CPG_120622231142'                          # fonctionne bien!
+# log_dir = interm_dir + 'CPG_120622193517'                           # 2eme avec nouveaux cpg?
+# log_dir = interm_dir + 'CPG_120822101153'                       #moving in y but not ok yet
 
-# log_dir = interm_dir + 'cpg_rl_120422141008'            # new reward fct
-
-
-log_dir = interm_dir + 'CPG_120622181738'            #test with in y, might work
-
+# log_dir = interm_dir + 'CPG_120822174454'            # new reward fct avec deplacement en y
 
 
+log_dir = interm_dir + 'CPG_121022113942'            #test with in y, might work
 
 
 
@@ -108,7 +114,7 @@ model_name = get_latest_model(log_dir)
 monitor_results = load_results(log_dir)
 print(monitor_results)
 plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
-plt.show()
+# plt.show()
 
 # reconstruct env 
 env = lambda: QuadrupedGymEnv(**env_config)
@@ -127,11 +133,32 @@ print("\nLoaded model", model_name, "\n")
 obs = env.reset()
 episode_reward = 0
 
-# [TODO] initialize arrays to save data from simulation 
+# [TODO] initialize arrays to save data from simulation
+# leg_pos = np.zeros((3, 1))
+# des_leg_pos = np.zeros((3, 1))
 #
+# r = np.zeros((4, 1))
+# rdot = np.zeros((4, 1))
+# theta = np.zeros((4, 1))
+# thetadot = np.zeros((4, 1))
+# #
+# robot_pos = np.zeros((3, 1))
+# robot_speed = np.zeros((3, 1))
 
-for i in range(2000):
-    action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
+leg_pos = np.zeros((3, 100 * EPISODE_LENGTH))
+des_leg_pos = np.zeros((3, 100 * EPISODE_LENGTH))
+############################# CPG vectors ##########################################################################
+if motor_control_mode == "CPG":
+    r = np.zeros((4, 100 * EPISODE_LENGTH))
+    rdot = np.zeros((4, 100 * EPISODE_LENGTH))
+    theta = np.zeros((4, 100 * EPISODE_LENGTH))
+    thetadot = np.zeros((4, 100 * EPISODE_LENGTH))
+#######################################################################################################################
+robot_pos = np.zeros((3, 100 * EPISODE_LENGTH))
+robot_speed = np.zeros((3, 100 * EPISODE_LENGTH))
+
+for i in range(100 * EPISODE_LENGTH):
+    action, _states = model.predict(obs, deterministic=False) # sample at test time? ([TODO]: test)
     obs, rewards, dones, info = env.step(action)
     episode_reward += rewards
     if dones:
@@ -139,8 +166,119 @@ for i in range(2000):
         print('Final base position', info[0]['base_pos'])
         episode_reward = 0
 
-    # [TODO] save data from current robot states for plots 
-    # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
-    #
+    # [TODO] save data from current robot states for plots
+
+    if motor_control_mode == "CPG":
+        xs, ys, zs = env.envs[0].env._cpg.update()
+        des_leg_pos[:, i] = np.array([xs[0], ys[0], zs[0]])
+        r[:, i] = env.envs[0].env._cpg.get_r()
+        rdot[:, i] = env.envs[0].env._cpg.get_dr()
+        theta[:, i] = env.envs[0].env._cpg.get_theta()
+        thetadot[:, i] = env.envs[0].env._cpg.get_dtheta()
+    else:
+        des_leg_pos[:, i] = env.envs[0].env._robot_config.NOMINAL_FOOT_POS_LEG_FRAME
+
+    robot_pos[:, i] = env.envs[0].env.robot.GetBasePosition()
+    robot_speed[:, i] = env.envs[0].env.robot.GetBaseLinearVelocity()
+
+    _, leg_pos[:, i] = env.envs[0].env.robot.ComputeJacobianAndPosition(0)
+
+    # print(f'this is a test {env.envs[0].env.robot.GetBasePosition()}')
+    # if i == 300:
+    #     break
     
 # [TODO] make plots:
+
+t = np.arange(r.shape[1])
+if plot_cpg and motor_control_mode == "CPG":
+    colors = np.array(["b", "g", "r", "c"])
+    fig = plt.figure()
+    subfigs = fig.subfigures(2, 2, wspace=0.07)
+
+    labels = np.array(["time [s]", "amplitudes []"])
+    ax1 = subfigs[0, 0].subplots(4, sharex=True)
+    subfigs[0, 0].suptitle("amplitude of oscillators (r)")
+    for i, ax in enumerate(ax1):
+        ax.plot(t, r[i, :], label = 'leg' + str(i), color = colors[i])
+        ax.grid(True)
+        if i == 1:
+            ax.set_ylabel(labels[1], loc="bottom")
+        ax.legend()
+    plt.xlabel(labels[0])
+
+    labels = np.array(["time [s]", "angles [rad]"])
+    ax2 = subfigs[0, 1].subplots(4, sharex=True)
+    subfigs[0, 1].suptitle("angles of oscillators (theta)")
+    for i, ax in enumerate(ax2):
+        ax.plot(t, theta[i, :], label = 'leg' + str(i), color = colors[i])
+        ax.grid(True)
+        if i == 1:
+            ax.set_ylabel(labels[1], loc="bottom")
+        ax.legend()
+    plt.xlabel(labels[0])
+
+    labels = np.array(["time [s]", "derivate of amplitude []"])
+    ax3 = subfigs[1, 0].subplots(4, sharex=True)
+    subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
+    for i, ax in enumerate(ax3):
+        ax.plot(t, rdot[i, :], label = 'leg' + str(i), color = colors[i])
+        ax.grid(True)
+        if i == 1:
+            ax.set_ylabel(labels[1], loc="top")
+        ax.legend()
+    plt.xlabel(labels[0])
+
+    labels = np.array(["time [s]", "angular velocity [rad/s]"])
+    ax4 = subfigs[1, 1].subplots(4, sharex=True)
+    subfigs[1, 1].suptitle("Angular velocity (theta dot)")
+    for i, ax in enumerate(ax4):
+        ax.plot(t, thetadot[i, :], label = 'leg' + str(i), color = colors[i])
+        ax.grid(True)
+        if i == 1:
+            ax.set_ylabel(labels[1], loc="top")
+        ax.legend()
+    plt.xlabel(labels[0])
+######################################################################
+
+if plot_foot_pos:
+    fig = plt.figure()
+
+    labels = np.array(["time [s]", "X [m]"])
+    labels_positions = np.array(["x", "y", "z"])
+    labels_joint = np.array(["hip", "thigh", "calf"])
+    # ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
+    ax1 = fig.subplots(3, 1, sharex=True)
+    fig.suptitle("foot positions")
+    for i, ax in enumerate(ax1):
+        ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
+        ax.plot(t, leg_pos[i, :], label = "actual leg position for " + labels_positions[i], color = "r")
+        ax.grid(True)
+        if i == 1:
+            ax.set_ylabel(labels[1])
+        ax.legend()
+    plt.xlabel(labels[0])
+        ########################################################
+
+if plot_speed_pos:
+    fig = plt.figure()
+    labels = np.array(["time [s]", "speed [m/s]"])
+    subfigs = fig.subfigures(1, 2, wspace=0.07)
+    labels_speed = np.array(["Vx", "Vy", "Vz"])
+    ax1 = subfigs[0].subplots(3, sharex=True)
+    for i, ax in enumerate(ax1):
+        ax.plot(t, robot_speed[i, :], label = labels_speed[i])
+        ax.legend()
+        if i == 1:
+            ax.set_ylabel(labels[1])
+    plt.xlabel(labels[0])
+
+    labels = np.array(["x position", "y position"])
+    ax2 = subfigs[1].subplots(1)
+    ax2.plot(robot_pos[0, :], robot_pos[1, :])
+    plt.xlabel(labels[0])
+    plt.ylabel(labels[1])
+
+    print(f'This is sparta: {robot_pos[0,:]} \n')
+    print(f'This is spartay: {robot_pos[1, :]}')
+
+plt.show()

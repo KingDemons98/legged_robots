@@ -179,6 +179,10 @@ class QuadrupedGymEnv(gym.Env):
     self._MAX_EP_LEN = EPISODE_LENGTH # max sim time in seconds, arbitrary
     self._action_bound = 1.0
 
+    ######### init pos##########
+    self.last_pos = np.zeros(3)
+    #################################3
+
     # if using CPG
     self.setupCPG()
 
@@ -366,7 +370,7 @@ class QuadrupedGymEnv(gym.Env):
     return max(reward, 0) # keep rewards positive
 
 
-  def _reward_lr_course(self, des_vel_x = 0.5, des_vel_y = 0.0, des_vel_yaw = 0.0):
+  def _reward_lr_course(self, des_vel_x = 0.0, des_vel_y = 0.0, des_vel_yaw = 0.0):
     """ Implement your reward function here. How will you improve upon the above? """
     # TODO: finish the reward function, more opti for cpg
     vel_tracking_reward_x = 0.09 * np.exp(-1 / 0.25 * (self.robot.GetBaseLinearVelocity()[0] - des_vel_x) ** 2)
@@ -396,11 +400,12 @@ class QuadrupedGymEnv(gym.Env):
 
     return max(reward, 0)  # keep rewards positive
 
-  def _reward_lr_test(self, des_vel_x = 0.0, des_vel_y = 0.0, des_vel_yaw = 0.0):
+  def _reward_lr_test(self, des_vel_x = 0.0, des_vel_y = 0.0, des_vel_yaw = 0.0, des_direction = "x"):
     """ Implement your reward function here. How will you improve upon the above? """
     # TODO: finish the reward function, more opti for cpg
     dt = 0.01
     # minimize energy
+    pos = self.robot.GetBasePosition()
     energy_reward = 0
     for tau, vel in zip(self._dt_motor_torques, self._dt_motor_velocities):
         energy_reward += np.abs(np.dot(tau, vel)) * self._time_step
@@ -411,6 +416,12 @@ class QuadrupedGymEnv(gym.Env):
     vel_z_penalty = -2 * dt * self.robot.GetBaseLinearVelocity()[2] ** 2
     roll_penalty = -0.05 * dt * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[0])
     pitch_penalty = -0.05 * dt * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[1])
+    if des_direction == "x":
+        direction_reward = 0.5 * dt * (pos[0] - self.last_pos[0])
+    elif des_direction == "y":
+        direction_reward = 0.5 * dt * (np.exp(pos[1]) - np.exp(pos[0]))
+
+    self.last_pos = pos
 
     reward = vel_tracking_reward_x \
              + vel_tracking_reward_y \
@@ -419,6 +430,7 @@ class QuadrupedGymEnv(gym.Env):
              + vel_z_penalty \
              + roll_penalty \
              + pitch_penalty \
+             + direction_reward \
              - 0.001 * dt * energy_reward \
              - 0.01 * dt * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0, 0, 0, 1]))
 
@@ -430,9 +442,9 @@ class QuadrupedGymEnv(gym.Env):
       return self._reward_fwd_locomotion(des_vel_x=0.8)
     elif self._TASK_ENV == "LR_COURSE_TASK":
       # return self._reward_lr_course(des_vel_x=1.5)
-      return self._reward_lr_course(des_vel_x=0.5)
+      return self._reward_lr_course(des_vel_y=0.3, des_vel_x = 0.0)
     elif self._TASK_ENV == "TEST":
-      return self._reward_lr_test(des_vel_x=1.0)
+      return self._reward_lr_test(des_vel_y = 0.3, des_vel_x=0.0, des_direction= "y")
     else:
       raise ValueError("This task mode not implemented yet.")
 
@@ -514,6 +526,7 @@ class QuadrupedGymEnv(gym.Env):
     # integrate CPG, get mapping to foot positions
     xs, ys, zs = self._cpg.update()
 
+
     # IK parameters
     foot_y = self._robot_config.HIP_LINK_LENGTH
     sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
@@ -526,10 +539,10 @@ class QuadrupedGymEnv(gym.Env):
 
 
 ################################ params for cartesian ##################################################################
-    scale_array = np.array([0.1, 0.05, 0.08] * 4)
+    # scale_array = np.array([0.1, 0.05, 0.08] * 4)
     # add to nominal foot position in leg frame (what are the final ranges?)
     # des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array * u            ## TODO a verifier comment cette ligne peut etre adaptée
-    des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME
+    # des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME
     # get Cartesian kp and kd gains (can be modified)
     kpCartesian = self._robot_config.kpCartesian
     kdCartesian = self._robot_config.kdCartesian
@@ -541,11 +554,12 @@ class QuadrupedGymEnv(gym.Env):
       # get desired foot i pos (xi, yi, zi)
       x = xs[i]
       # y = sideSign[i] * foot_y # careful of sign
-      y = sideSign[i] *  ys[i]
+      y = sideSign[i] * ys[i]
       z = zs[i]
+      des_foot_pos = np.array([x, y, z])
 
       # call inverse kinematics to get corresponding joint angles
-      q_des = self.robot.ComputeInverseKinematics(i, np.array([x, y, z]))
+      q_des = self.robot.ComputeInverseKinematics(i, des_foot_pos)
       # Add joint PD contribution to tau
       tau = kp[3*i:3*i+3] * (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] * (0 - dq[3*i:3*i+3])
 
@@ -554,13 +568,14 @@ class QuadrupedGymEnv(gym.Env):
       # get Jacobian and foot position in leg frame for leg i (see ComputeJacobianAndPosition() in quadruped.py)
       J, foot_pos = self.robot.ComputeJacobianAndPosition(i)
       # desired foot position i (from RL above)
-      Pd = des_foot_pos[3 * i: 3 * i + 3]
+      # Pd = des_foot_pos[3 * i: 3 * i + 3]
+
       # desired foot velocity i
       vd = np.zeros(3)
       # foot velocity in leg frame i (Equation 2)
       foot_vel = np.matmul(J, dq[3 * i:3 * i + 3])
       # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau_cart = np.matmul(np.transpose(J), np.matmul(kpCartesian, Pd - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
+      tau_cart = np.matmul(np.transpose(J), np.matmul(kpCartesian, des_foot_pos - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
 
       tau += tau_cart
 ########################################################################################################################

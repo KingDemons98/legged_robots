@@ -51,7 +51,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 
 LEARNING_ALG = "SAC" # or "SAC"
-LOAD_NN = False # if you want to initialize training with a previous model                   #HERE HERE HERE
+LOAD_NN = True # if you want to initialize training with a previous model                   #HERE HERE HERE
 NUM_ENVS = 10    # how many pybullet environments to create for data collection
 USE_GPU = True  # make sure to install all necessary drivers
 
@@ -91,13 +91,13 @@ else:
 
 if LOAD_NN:
     # interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'CPG_120922111330'                # put the name of last model here
+    log_dir = interm_dir + 'CPG_120622231142_best_run_yet'                # put the name of last model here
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
 # SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_test_env' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
-NAME = motor_control_mode + "_cart_solve" + datetime.now().strftime("%m%d%y%H%M%S")
+NAME = motor_control_mode + "_best_run_follow_" + datetime.now().strftime("%m%d%y%H%M%S")
 SAVE_PATH = interm_dir + NAME + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
@@ -141,7 +141,7 @@ ppo_config = {  "gamma":0.99,
                 "clip_range":0.2, 
                 "clip_range_vf":1,
                 "verbose":1, 
-                "tensorboard_log":f"tensorboard_logs",
+                "tensorboard_log":f"runs",
                 "_init_setup_model":True, 
                 "policy_kwargs":policy_kwargs,
                 "device": gpu_arg}
@@ -160,7 +160,7 @@ sac_config={"learning_rate":1e-4,
             "gradient_steps":1,
             "learning_starts": 10000,
             "verbose":1, 
-            "tensorboard_log":f"tensorboard_logs",
+            "tensorboard_log":f"runs",
             "policy_kwargs": policy_kwargs,
             "seed":None, 
             "device": gpu_arg}
@@ -176,9 +176,9 @@ else:
 
 if LOAD_NN:
     if LEARNING_ALG == "PPO":
-        model = PPO.load(model_name, env)
+        model = PPO.load(model_name, env, **{"tensorboard_log":f"runs"})
     elif LEARNING_ALG == "SAC":
-        model = SAC.load(model_name, env)
+        model = SAC.load(model_name, env, **{"tensorboard_log":f"runs"})
     print("\nLoaded model", model_name, "\n")
 
 # Learn and save (may need to train for longer)

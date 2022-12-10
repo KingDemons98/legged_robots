@@ -1,0 +1,37 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.13.5
+    code_path: code/projet_2/run_sb3.py
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.9.13
+    start_time: 1670336084.238144
+    t:
+      1:
+      - 1
+      - 55
+      2:
+      - 1
+      - 55
+      3:
+      - 16
+      - 23
+      - 35
+      4: 3.9.13
+      5: 0.13.5
+      8:
+      - 3
+      - 5
+motor_control_mode:
+  desc: null
+  value: CPG
+observation_space_mode:
+  desc: null
+  value: CPG_RL
+task_env:
+  desc: null
+  value: LR_COURSE_TASK

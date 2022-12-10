@@ -162,11 +162,12 @@ if LOAD_NN:
     print("\nLoaded model", model_name, "\n")
 
 # Learn and save (may need to train for longer)
-model.learn(total_timesteps=1000000, callback=WandbCallback())
+model.learn(total_timesteps=1000000, callback=WandbCallback(model_save_freq=1000,
+        model_save_path=f"models/{run.id}",),)
 # Don't forget to save the VecNormalize statistics when saving the agent
-model.save(os.path.join(SAVE_PATH, "rl_model") )
-env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl"))
-if LEARNING_ALG == "SAC": # save replay buffer
-    model.save_replay_buffer(os.path.join(SAVE_PATH, "off_policy_replay_buffer"))
+#model.save(os.path.join(SAVE_PATH, "rl_model") )
+#env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl"))
+#if LEARNING_ALG == "SAC": # save replay buffer
+#    model.save_replay_buffer(os.path.join(SAVE_PATH, "off_policy_replay_buffer"))
 run.finish()
 

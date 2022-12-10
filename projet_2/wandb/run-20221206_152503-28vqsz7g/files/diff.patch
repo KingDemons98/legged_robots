@@ -1,0 +1,32 @@
+diff --git a/projet_2/run_sb3.py b/projet_2/run_sb3.py
+index 2e5f6c6..f6a2c5d 100644
+--- a/projet_2/run_sb3.py
++++ b/projet_2/run_sb3.py
+@@ -70,7 +70,6 @@ env_configs = {"motor_control_mode": "CPG",
+ run = wandb.init(
+     project="legTest1",
+     entity="leggedbois",
+-    config=env_configs,
+     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+     monitor_gym=True,  # auto-upload the videos of agents playing the game
+     save_code=True,
+@@ -105,7 +104,7 @@ else:
+     env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=100.)
+ 
+ # Multi-layer perceptron (MLP) policy of two layers of size _,_ 
+-policy_kwargs = dict(net_arch=[256,256])
++policy_kwargs = dict(net_arch=[256, 256])
+ # What are these hyperparameters? Check here: https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html
+ n_steps = 4096 
+ learning_rate = lambda f: 1e-4 
+@@ -144,8 +143,10 @@ sac_config={"learning_rate":1e-4,
+ 
+ if LEARNING_ALG == "PPO":
+     model = PPO('MlpPolicy', env, **ppo_config)
++    wandb.config = ppo_config
+ elif LEARNING_ALG == "SAC":
+     model = SAC('MlpPolicy', env, **sac_config)
++    wandb.config = sac_config
+ else:
+     raise ValueError(LEARNING_ALG + 'not implemented')
+ 

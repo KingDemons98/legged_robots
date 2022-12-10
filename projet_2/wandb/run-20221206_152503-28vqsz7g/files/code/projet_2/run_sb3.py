@@ -35,7 +35,7 @@ Check the documentation! https://stable-baselines3.readthedocs.io/en/master/
 import os
 from datetime import datetime
 # stable baselines 3
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, VecVideoRecorder
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.env_util import make_vec_env
 # utils
@@ -46,13 +46,12 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 import wandb
 from wandb.integration.sb3 import WandbCallback
-from stable_baselines3.common.monitor import Monitor
 
 
 
 LEARNING_ALG = "SAC" # or "SAC"
 LOAD_NN = False # if you want to initialize training with a previous model                   #HERE HERE HERE
-NUM_ENVS = 1    # how many pybullet environments to create for data collection
+NUM_ENVS = 10    # how many pybullet environments to create for data collection
 USE_GPU = True  # make sure to install all necessary drivers
 
 # after implementing, you will want to test how well the agent learns with your MDP: 
@@ -71,11 +70,10 @@ env_configs = {"motor_control_mode": "CPG",
 run = wandb.init(
     project="legTest1",
     entity="leggedbois",
-    config=env_configs,
     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
     monitor_gym=True,  # auto-upload the videos of agents playing the game
-    save_code=True,  # optional
-    )
+    save_code=True,
+    )# optional)
 
 
 if USE_GPU and LEARNING_ALG=="SAC":
@@ -97,8 +95,6 @@ checkpoint_callback = CheckpointCallback(save_freq=20000//NUM_ENVS, save_path=SA
 # create Vectorized gym environment
 env = lambda: QuadrupedGymEnv(**env_configs)  
 env = make_vec_env(env, monitor_dir=SAVE_PATH, n_envs=NUM_ENVS)
-#env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 2000 == 0, video_length=200)
-
 # normalize observations to stabilize learning (why?)
 
 
@@ -124,7 +120,7 @@ ppo_config = {  "gamma":0.99,
                 "clip_range":0.2, 
                 "clip_range_vf":1,
                 "verbose":1, 
-                "tensorboard_log":f"runs",
+                "tensorboard_log":f"runs/{run.id}",
                 "_init_setup_model":True, 
                 "policy_kwargs":policy_kwargs,
                 "device": gpu_arg}
@@ -140,17 +136,17 @@ sac_config={"learning_rate":1e-4,
             "gradient_steps":1,
             "learning_starts": 10000,
             "verbose":1, 
-            "tensorboard_log":f"runs",
+            "tensorboard_log":f"runs/{run.id}",
             "policy_kwargs": policy_kwargs,
             "seed":None, 
             "device": gpu_arg}
 
 if LEARNING_ALG == "PPO":
     model = PPO('MlpPolicy', env, **ppo_config)
-    #wandb.config.update(ppo_config)
+    wandb.config = ppo_config
 elif LEARNING_ALG == "SAC":
     model = SAC('MlpPolicy', env, **sac_config)
-    #wandb.config.update(sac_config)
+    wandb.config = sac_config
 else:
     raise ValueError(LEARNING_ALG + 'not implemented')
 
@@ -162,11 +158,11 @@ if LOAD_NN:
     print("\nLoaded model", model_name, "\n")
 
 # Learn and save (may need to train for longer)
-model.learn(total_timesteps=1000000, callback=WandbCallback())
+model.learn(total_timesteps=1000000, log_interval=1, callback=WandbCallback(gradient_save_freq=20000//NUM_ENVS, model_save_path=SAVE_PATH, verbose=2))
 # Don't forget to save the VecNormalize statistics when saving the agent
 model.save(os.path.join(SAVE_PATH, "rl_model") )
 env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl"))
-if LEARNING_ALG == "SAC": # save replay buffer
+if LEARNING_ALG == "SAC": # save replay buffer 
     model.save_replay_buffer(os.path.join(SAVE_PATH, "off_policy_replay_buffer"))
 run.finish()
 

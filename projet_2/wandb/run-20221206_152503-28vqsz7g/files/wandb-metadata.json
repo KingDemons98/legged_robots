@@ -1,0 +1,50 @@
+{
+    "os": "Windows-10-10.0.22000-SP0",
+    "python": "3.9.13",
+    "heartbeatAt": "2022-12-06T14:25:04.114550",
+    "startedAt": "2022-12-06T14:25:03.322103",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "C:\\Users\\guill\\Desktop\\EPFL\\MA3\\legged_robots\\projet_2\\run_sb3.py",
+    "codePath": "projet_2\\run_sb3.py",
+    "git": {
+        "remote": "https://github.com/KingDemons98/legged_robots.git",
+        "commit": "70d94216483a6c6a1d09a2125d7f219ca49cc1f7"
+    },
+    "email": "guillaume.krafft2@gmail.com",
+    "root": "C:/Users/guill/Desktop/EPFL/MA3/legged_robots",
+    "host": "LAPTOP-GUI",
+    "username": "guill",
+    "executable": "C:\\Users\\guill\\.conda\\envs\\legged\\python.exe",
+    "cpu_count": 8,
+    "cpu_count_logical": 16,
+    "cpu_freq": {
+        "current": 3201.0,
+        "min": 0.0,
+        "max": 3201.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3201.0,
+            "min": 0.0,
+            "max": 3201.0
+        }
+    ],
+    "disk": {
+        "total": 363.76476287841797,
+        "used": 229.03660583496094
+    },
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+            "memory_total": 4294967296
+        }
+    ],
+    "memory": {
+        "total": 13.855525970458984
+    }
+}

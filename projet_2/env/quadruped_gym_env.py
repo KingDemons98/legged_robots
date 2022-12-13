@@ -272,6 +272,7 @@ class QuadrupedGymEnv(gym.Env):
       action_dim = 12
     elif self._motor_control_mode in ["CPG"]:
       action_dim = 12
+      # action_dim = 16                                         # TODO try later
     else:
       raise ValueError("motor control mode " + self._motor_control_mode + " not implemented yet.")
     action_high = np.array([1] * action_dim)
@@ -523,6 +524,8 @@ class QuadrupedGymEnv(gym.Env):
     psis = self._scale_helper(u[8:12], -1.5*2*np.pi, 1.5*2*np.pi)
     self._cpg.set_psi_rl(psis)
 
+    # ztrain = self._scale_helper(u[12:16], -0.1, 0.1)                          #TODO to try later
+
     # integrate CPG, get mapping to foot positions
     xs, ys, zs = self._cpg.update()
 
@@ -539,9 +542,6 @@ class QuadrupedGymEnv(gym.Env):
 
 
 ################################ params for cartesian ##################################################################
-    # scale_array = np.array([0.1, 0.05, 0.08] * 4)
-    # add to nominal foot position in leg frame (what are the final ranges?)
-    # des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array * u            ## TODO a verifier comment cette ligne peut etre adaptée
     # des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME
     # get Cartesian kp and kd gains (can be modified)
     kpCartesian = self._robot_config.kpCartesian
@@ -554,7 +554,8 @@ class QuadrupedGymEnv(gym.Env):
       # get desired foot i pos (xi, yi, zi)
       x = xs[i]
       # y = sideSign[i] * foot_y # careful of sign
-      y = sideSign[i] * ys[i]
+      y = ys[i] + foot_y * sideSign[i]
+      # z = zs[i] + ztrain[i]                                           #TODO try later
       z = zs[i]
       des_foot_pos = np.array([x, y, z])
 

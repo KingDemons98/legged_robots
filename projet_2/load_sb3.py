@@ -55,13 +55,14 @@ from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
 LEARNING_ALG = "SAC"
-EPISODE_LENGTH = 100
+EPISODE_LENGTH = 20
 
 #plot graphs or not
 ##########################################################################
 plot_cpg = True
 plot_foot_pos = True
 plot_speed_pos = True
+plot_training = True
 
 ###########################################################################
 # initialize env configs (render at test time)
@@ -70,7 +71,7 @@ env_config = {}
 env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
-env_config['competition_env'] = False            #### SET COMPET ENV HERE
+env_config['competition_env'] = True            #### SET COMPET ENV HERE
 # env_config['test_env'] = True
 
 motor_control_mode = "CPG"                   ##### SET MOTOR CONTROL HERE
@@ -102,7 +103,7 @@ else:
 
 # log_dir = interm_dir + 'CPG_120822174454'            # new reward fct avec deplacement en y
 
-log_dir = interm_dir + 'CPG_cart_solve_y_121222100704'      #maybe the right for y
+# log_dir = interm_dir + 'CPG_cart_solve_y_121222100704'      #maybe the right for y
 
 # log_dir = interm_dir + 'CPG_cart_solve_y_121122161834'
 
@@ -123,7 +124,7 @@ log_dir = interm_dir + 'CPG_cart_solve_y_121222100704'      #maybe the right for
 
 # log_dir = interm_dir + 'CPGCPG_test_y_offset_only_in_cart_121722174616'    # try with y offset only for cart (not joint)
 
-# log_dir = interm_dir + 'CPG_test_best_run_follow_new_rwd_121922100642'
+log_dir = interm_dir + 'CPG_test_with_psi_limited_122122232452'
 
 # log_dir = interm_dir + 'CPG_CPG_y_corrected_try_without_cart121522141406'   #new try without cartesian
 
@@ -141,8 +142,9 @@ log_dir = interm_dir + 'CPG_cart_solve_y_121222100704'      #maybe the right for
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
 model_name = get_latest_model(log_dir)
 monitor_results = load_results(log_dir)
-print(monitor_results)
-plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
+if plot_training:
+    print(monitor_results)
+    plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
 # plt.show()
 
 # reconstruct env 
@@ -229,8 +231,6 @@ for i in range(100 * EPISODE_LENGTH):
 
         else:
             des_leg_pos = np.append(leg_pos, np.array([env.envs[0].env._robot_config.NOMINAL_FOOT_POS_LEG_FRAME[0:3]]), axis=0)
-
-    # print(f'this is a test {env.envs[0].env.robot.GetBasePosition()}')
     
 # [TODO] make plots:
 
@@ -241,7 +241,7 @@ if plot_cpg and motor_control_mode == "CPG":
     fig = plt.figure()
     subfigs = fig.subfigures(2, 2, wspace=0.07)
 
-    labels = np.array(["time [s]", "amplitudes []"])
+    labels = np.array(["time [s]", "amplitudes"])
     ax1 = subfigs[0, 0].subplots(4, sharex=True)
     subfigs[0, 0].suptitle("amplitude of oscillators (r)")
     for i, ax in enumerate(ax1):
@@ -263,7 +263,7 @@ if plot_cpg and motor_control_mode == "CPG":
         ax.legend()
     plt.xlabel(labels[0])
 
-    labels = np.array(["time [s]", "derivate of amplitude []"])
+    labels = np.array(["time [s]", "derivate of amplitude"])
     ax3 = subfigs[1, 0].subplots(4, sharex=True)
     subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
     for i, ax in enumerate(ax3):

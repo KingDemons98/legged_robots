@@ -40,6 +40,8 @@ import numpy as np
 MU_LOW = 1
 MU_UPP = 2
 
+foot_y = 0.0838
+sideSign = np.array([-1, 1, -1, 1])
 
 class HopfNetwork():
   """ CPG network based on hopf polar equations mapped to foot positions in Cartesian space.  
@@ -158,7 +160,8 @@ class HopfNetwork():
       if self.use_RL:
         phi = self.X[2, i]
         x[i] = -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.cos(phi)
-        y[i] = -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
+        # y[i] = sideSign[i] * foot_y -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
+        y[i]= -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
 
       else:
         r = self.X[0, i]
@@ -173,8 +176,6 @@ class HopfNetwork():
       # use des step len, fixed
       return x, z
     else:
-      # RL uses amplitude to set max step length
-      r = np.clip(self.X[0,:],MU_LOW,MU_UPP) 
       return x, y, z
 
       

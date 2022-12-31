@@ -91,13 +91,13 @@ else:
 
 if LOAD_NN:
     # interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'CPG_120622231142_best_run_yet'                # put the name of last model here
+    log_dir = interm_dir + 'CPG_test_with_psi_limited_122122142414'                # put the name of last model here
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
 # SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_test_env' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
-NAME = motor_control_mode + "_best_run_follow_" + datetime.now().strftime("%m%d%y%H%M%S")
+NAME = motor_control_mode + "_test_with_psi_limited_" + datetime.now().strftime("%m%d%y%H%M%S")
 SAVE_PATH = interm_dir + NAME + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
@@ -125,7 +125,7 @@ run = wandb.init(
 run.config.update({"LOAD_NN":LOAD_NN})
 
 # Multi-layer perceptron (MLP) policy of two layers of size _,_ 
-policy_kwargs = dict(net_arch=[256,256])
+policy_kwargs = dict(net_arch=[256, 256])
 # What are these hyperparameters? Check here: https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html
 n_steps = 4096 
 learning_rate = lambda f: 1e-4 

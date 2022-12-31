@@ -54,15 +54,17 @@ sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negati
 gait = "TROT"
 
 ###### plots variable
-plots_speed = False
-plot_cpg = True
+plots_speed = True
+plot_cpg = False
 plot_CoT = False
 plot_speed_vector = False
+test_cartesian = True
+test_joint = True
 
 #################################
 
 simulation_time = 10
-number_of_simulations = 4
+number_of_simulations = 1
 TEST_STEPS = int(simulation_time / (TIME_STEP))
 
 avg_vector = np.zeros([number_of_simulations, TEST_STEPS])
@@ -71,7 +73,7 @@ y_pos_vector = np.zeros([number_of_simulations, TEST_STEPS])
 
 for sim in range(number_of_simulations):
     env = QuadrupedGymEnv(render=False,             # visualize
-                        on_rack=True,              # useful for debugging!
+                        on_rack=False,              # useful for debugging!
                         isRLGymInterface=False,     # not using RL
                         time_step=TIME_STEP,
                         action_repeat=1,
@@ -82,8 +84,8 @@ for sim in range(number_of_simulations):
 
         # initialize Hopf Network, supply gait
     if(gait == "TROT"):
-        cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT", omega_swing=8.88 * 2 * np.pi, omega_stance=3.29 * 2 * np.pi,
-                          alpha=30, ground_clearance=0.079, ground_penetration=0.01, robot_height=0.31, des_step_len=0.09)
+        cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT", omega_swing=8.2 * 2 * np.pi, omega_stance=6.4 * 2 * np.pi,
+                          ground_penetration=0.015, alpha =50, ground_clearance=0.07, robot_height=0.26,  des_step_len = 0.064)
     elif(gait == "BOUND"):
         cpg = HopfNetwork(time_step=TIME_STEP, gait="BOUND", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
     elif(gait == "WALK"):
@@ -113,11 +115,11 @@ for sim in range(number_of_simulations):
 
     ############## Sample Gains
     # joint PD gains
-    kp=np.array([100,100,100])
-    kd=np.array([2,2,2])
+    kp=np.array([100,87,87.5])
+    kd=np.array([1.98,2.02,2])
     # Cartesian PD gains
-    kpCartesian = np.diag([500]*3)
-    kdCartesian = np.diag([20]*3)
+    kpCartesian = np.diag([929.2]*3)
+    kdCartesian = np.diag([17.8]*3)
 
     speeds = np.empty([5, TEST_STEPS]) #contains time, speed, Xpos,Ypos,CoT
     mass = np.sum(env.robot.GetTotalMassFromURDF())
@@ -140,7 +142,7 @@ for sim in range(number_of_simulations):
         speeds[2, j] = x  # Xpos
         speeds[3, j] = y  # Ypos
 
-        power = np.sum(np.multiply(dq, torques))
+        power = np.sum(np.abs(np.multiply(dq, torques)))
 
         speeds[4, j] = power / (speed * mass * G)  # CoT
 
@@ -158,8 +160,9 @@ for sim in range(number_of_simulations):
             leg_xyz = np.array([xs[i], sideSign[i] * foot_y, zs[i]])
             # call inverse kinematics to get corresponding joint angles (see ComputeInverseKinematics() in quadruped.py)
             leg_q = env.robot.ComputeInverseKinematics(i, leg_xyz)
-            # Add joint PD contribution to tau for leg i (Equation 4)
-            tau += kp * (leg_q - q[3*i:3*i+3]) + kd * (0 - dq[3*i:3*i+3])
+            if(test_joint == True):
+                # Add joint PD contribution to tau for leg i (Equation 4)
+                tau += kp * (leg_q - q[3*i:3*i+3]) + kd * (0 - dq[3*i:3*i+3])
 
             # print(f'leg q is {leg_q}')
 
@@ -180,15 +183,19 @@ for sim in range(number_of_simulations):
 
                 # Get current foot velocity in leg frame (Equation 2)
                 foot_vel = np.matmul(jacob_cart, dq[3*i:3*i+3])
-
-                # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-                tau += np.matmul(np.transpose(jacob_cart), np.matmul(kpCartesian, leg_xyz - foot_pos) + np.matmul(kdCartesian, 0 - foot_vel))
+                if(test_cartesian == True):
+                    # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
+                    tau += np.matmul(np.transpose(jacob_cart), np.matmul(kpCartesian, leg_xyz - foot_pos) + np.matmul(kdCartesian, 0 - foot_vel))
 
             # Set tau for legi in action vector
             action[3*i:3*i+3] = tau
 
         # send torques to robot and simulate TIME_STEP seconds
         env.step(action)
+
+    ######################################################
+    # PLOTS
+    ######################################################
 
     avg = np.zeros([TEST_STEPS])
     n = 500
@@ -222,9 +229,11 @@ for sim in range(number_of_simulations):
         ax1 = ax[0]
         ax1.plot(speeds[0, :], speeds[1, :], label="instant speed")
         ax1.plot(speeds[0, :], avg, label=f"instant speed (averaged over {int(n/2)} next and prev values")
+        ax1.axhline(y = avg[-1], color = 'orange', linestyle = 'dashed', linewidth = 1 )
+        ax1.axvline(x = 4.25, color = 'orange', linewidth = 1)
         ax1.set(xlabel=f"time [s]\n speed after convergence: {avg[-1]:.4f}[m/s]", ylabel="speed [m/s]")
         ax1.title.set_text("Instant and mobile averaged horizontal speed")
-        ax1.set_box_aspect(0.4)
+        # ax1.set_box_aspect(0.4)
         ax1.legend()
 
         # plots the position
@@ -233,50 +242,66 @@ for sim in range(number_of_simulations):
         ratio = x_scale/y_scale
         ax2 = ax[1]
         ax2.plot(speeds[2, :], speeds[3, :])
+        ax2.axvline(x=0, color = 'green', linestyle = 'dashdot', linewidth = 0.5)
+        ax2.axhline(y=0, color = 'green', linestyle = 'dashdot', linewidth = 0.5)
+        # ax2.grid(color = 'green', linestyle = '--', linewidth = 0.5)
         ax2.set_xlim([-x_scale, x_scale])
         ax2.set_ylim([-y_scale, y_scale])
         ax2.set(xlabel="x displacement [m]", ylabel="y displacement [m]", label ="test")
         ax2.title.set_text("X-Y Trajectory")
-        ax2.set_box_aspect(1/ratio)
+        # ax2.set_box_aspect(1/ratio)
 
         fig_vel_pos.tight_layout()
         avg_vector[sim,:] = avg
         x_pos_vector[sim, :] = speeds[2, :]
         y_pos_vector[sim, :] = speeds[3, :]
 
+
     # plots instant CoT
+
+    begin = 8500
     if plot_CoT:
         plt.figure()
         plt.plot(speeds[0, :], speeds[4, :])
         plt.xlabel("time [s]")
         plt.ylabel("CoT")
         plt.title("Instant CoT of robot")
-##################################################### 
-# PLOTS
-#####################################################
+
+        plt.figure()
+        plt.plot(speeds[0, begin:], speeds[4, begin:])
+        avg_cot = np.average(speeds[4, begin:])
+        plt.axhline(y=avg_cot, color = 'orange', linestyle = 'dashed', linewidth = 1)
+        plt.xlabel("time [s]")
+        plt.ylabel("CoT")
+        plt.title("Instant CoT of robot over the last 1.5 [s]")
+
+
+
     if plot_cpg:
         colors = np.array(["b", "g", "r", "c"])
 
         # fig = plt.figure("CPG")
-        fig = plt.figure()
+        fig = plt.figure(figsize =(8.5, 6))
         subfigs = fig.subfigures(2, 2, wspace=0.07)
 
         labels = np.array(["time [s]", "amplitudes []"])
         ax1 = subfigs[0, 0].subplots(4, sharex=True)
+
         subfigs[0, 0].suptitle("amplitude of oscillators (r)")
         for i, ax in enumerate(ax1):
-            ax.plot(t, r[i, :], label = 'leg' + str(i), color = colors[i])
+            ax.plot(t[begin:], r[i, begin:], label = 'leg' + str(i), color = colors[i])
             ax.grid(True)
             if i == 1:
                 ax.set_ylabel(labels[1], loc="bottom")
             ax.legend()
         plt.xlabel(labels[0])
+        subfigs[0, 0].subplots_adjust(left = 0.15, hspace = 0.4, bottom = 0.15, right = 0.95)
 
         labels = np.array(["time [s]", "angles [rad]"])
         ax2 = subfigs[0, 1].subplots(4, sharex=True)
         subfigs[0, 1].suptitle("angles of oscillators (theta)")
         for i, ax in enumerate(ax2):
-            ax.plot(t, theta[i, :], label = 'leg' + str(i), color = colors[i])
+            ax.plot(t[begin:], theta[i, begin:], label = 'leg' + str(i), color = colors[i])
             ax.grid(True)
             if i == 1:
                 ax.set_ylabel(labels[1], loc="bottom")
@@ -287,7 +312,7 @@ for sim in range(number_of_simulations):
         ax3 = subfigs[1, 0].subplots(4, sharex=True)
         subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
         for i, ax in enumerate(ax3):
-            ax.plot(t, rdot[i, :], label = 'leg' + str(i), color = colors[i])
+            ax.plot(t[begin:], rdot[i, begin:], label = 'leg' + str(i), color = colors[i])
             ax.grid(True)
             if i == 1:
                 ax.set_ylabel(labels[1], loc="top")
@@ -298,7 +323,7 @@ for sim in range(number_of_simulations):
         ax4 = subfigs[1, 1].subplots(4, sharex=True)
         subfigs[1, 1].suptitle("Angular velocity (theta dot)")
         for i, ax in enumerate(ax4):
-            ax.plot(t, theta_dot[i, :], label = 'leg' + str(i), color = colors[i])
+            ax.plot(t[begin:], theta_dot[i, begin:], label = 'leg' + str(i), color = colors[i])
             ax.grid(True)
             if i == 1:
                 ax.set_ylabel(labels[1], loc="top")
@@ -308,7 +333,7 @@ for sim in range(number_of_simulations):
         ##### Value comparison between desired and real##################################
 
         # fig = plt.figure("Comparison values")
-        fig = plt.figure()
+        fig = plt.figure(figsize =(10, 5))
         subfigs = fig.subfigures(1, 2, wspace=0.07)
 
         labels = np.array(["time [s]", "X [m]"])
@@ -318,12 +343,13 @@ for sim in range(number_of_simulations):
         ax1 = subfigs[0].subplots(3, 1, sharex=True)
         subfigs[0].suptitle("foot positions")
         for i, ax in enumerate(ax1):
-            ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
-            ax.plot(t, act_leg_pos[i, :], label = "actual leg position for " + labels_positions[i], color = "r")
+            ax.plot(t[begin:], des_leg_pos[i, begin:], label = "desired leg position for " + labels_positions[i])
+            ax.plot(t[begin:], act_leg_pos[i, begin:], label = "actual leg position for " + labels_positions[i], color = "r")
             ax.grid(True)
             if i == 1:
                 ax.set_ylabel(labels[1])
             ax.legend()
+        subfigs[0].subplots_adjust(left = 0.2, bottom = 0.09, right = 0.96, top = 0.9)
         plt.xlabel(labels[0])
 
         labels = np.array(["time [s]", "joint angle [rad]"])
@@ -331,8 +357,8 @@ for sim in range(number_of_simulations):
         ax2 = subfigs[1].subplots(3, sharex=True)
         subfigs[1].suptitle("joint positions")
         for i, ax in enumerate(ax2):
-            ax.plot(t, des_joint_angles[i, :], label="desired joint position for joint " + labels_joint[i])
-            ax.plot(t, act_joint_angles[i, :], label="actual joint positionfor joint " + labels_joint[i], color="r")
+            ax.plot(t[begin:], des_joint_angles[i, begin:], label="desired joint position for joint " + labels_joint[i])
+            ax.plot(t[begin:], act_joint_angles[i, begin:], label="actual joint positionfor joint " + labels_joint[i], color="r")
             ax.grid(True)
             if i == 1:
                 ax.set_ylabel(labels[1])

@@ -55,21 +55,35 @@ gait = "TROT"
 
 ###### plots variable
 plots_speed = True
-plot_cpg = False
-plot_CoT = False
-plot_speed_vector = False
+plot_cpg = True
+plot_CoT = True
+compare_PD = False
 test_cartesian = True
-test_joint = True
+test_joint = False
 
 #################################
 
 simulation_time = 10
-number_of_simulations = 1
 TEST_STEPS = int(simulation_time / (TIME_STEP))
+
+print_mode = ["with Cartesian PD", "with Joint PD", "with both PD"]
+color_mode = ["r", "g", "b"]
+if compare_PD:
+    number_of_simulations = len(print_mode)
+else:
+    number_of_simulations = 1
 
 avg_vector = np.zeros([number_of_simulations, TEST_STEPS])
 x_pos_vector = np.zeros([number_of_simulations, TEST_STEPS])
 y_pos_vector = np.zeros([number_of_simulations, TEST_STEPS])
+begin = 9000 # for the plots
+begin_cot = 9500 # for the plots
+
+cot_avg = np.zeros([number_of_simulations, TEST_STEPS-begin_cot])
+act_leg_pos_vector = np.zeros((number_of_simulations, 3, TEST_STEPS-begin))
+act_joint_angles_vector = np.zeros((number_of_simulations, 3, TEST_STEPS-begin))
+
+
 
 for sim in range(number_of_simulations):
     env = QuadrupedGymEnv(render=False,             # visualize
@@ -81,6 +95,16 @@ for sim in range(number_of_simulations):
                         add_noise=False,    # start in ideal conditions
                         # record_video=True
                         )
+    if compare_PD:
+        if sim == 0:
+            test_cartesian = True
+            test_joint = False
+        elif sim == 1 :
+            test_cartesian = False
+            test_joint = True
+        else:
+            test_cartesian = True
+            test_joint = True
 
         # initialize Hopf Network, supply gait
     if(gait == "TROT"):
@@ -223,22 +247,22 @@ for sim in range(number_of_simulations):
         # print(f"Total average CoT {np.average(speeds[4,:])} ")
 
 
-        fig_vel_pos, ax = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [2, 1]})
+        fig_vel_pos, ax = plt.subplots(1, 2, figsize=(10, 3.5), gridspec_kw={'width_ratios': [2, 1]})
 
         # plots the speed
         ax1 = ax[0]
         ax1.plot(speeds[0, :], speeds[1, :], label="instant speed")
         ax1.plot(speeds[0, :], avg, label=f"instant speed (averaged over {int(n/2)} next and prev values")
         ax1.axhline(y = avg[-1], color = 'orange', linestyle = 'dashed', linewidth = 1 )
-        ax1.axvline(x = 4.25, color = 'orange', linewidth = 1)
+        ax1.axvline(x = 1.75, color = 'orange', linewidth = 1)
         ax1.set(xlabel=f"time [s]\n speed after convergence: {avg[-1]:.4f}[m/s]", ylabel="speed [m/s]")
         ax1.title.set_text("Instant and mobile averaged horizontal speed")
         # ax1.set_box_aspect(0.4)
         ax1.legend()
 
         # plots the position
-        x_scale = 7
-        y_scale = 7
+        x_scale = 15
+        y_scale = 15
         ratio = x_scale/y_scale
         ax2 = ax[1]
         ax2.plot(speeds[2, :], speeds[3, :])
@@ -249,6 +273,7 @@ for sim in range(number_of_simulations):
         ax2.set_ylim([-y_scale, y_scale])
         ax2.set(xlabel="x displacement [m]", ylabel="y displacement [m]", label ="test")
         ax2.title.set_text("X-Y Trajectory")
+        ax2.set_aspect('equal', 'box')
         # ax2.set_box_aspect(1/ratio)
 
         fig_vel_pos.tight_layout()
@@ -259,92 +284,92 @@ for sim in range(number_of_simulations):
 
     # plots instant CoT
 
-    begin = 8500
     if plot_CoT:
-        plt.figure()
-        plt.plot(speeds[0, :], speeds[4, :])
-        plt.xlabel("time [s]")
-        plt.ylabel("CoT")
-        plt.title("Instant CoT of robot")
+        if sim == 0:
+            plt.figure()
+            plt.plot(speeds[0, :], speeds[4, :])
+            plt.xlabel("time [s]")
+            plt.ylabel("CoT")
+            plt.title("Instant CoT of robot")
 
-        plt.figure()
-        plt.plot(speeds[0, begin:], speeds[4, begin:])
-        avg_cot = np.average(speeds[4, begin:])
-        plt.axhline(y=avg_cot, color = 'orange', linestyle = 'dashed', linewidth = 1)
-        plt.xlabel("time [s]")
-        plt.ylabel("CoT")
-        plt.title("Instant CoT of robot over the last 1.5 [s]")
+            plt.figure()
+            plt.plot(speeds[0, begin_cot:], speeds[4, begin_cot:])
+            avg_cot = np.average(speeds[4, begin_cot:])
+            plt.axhline(y=avg_cot, color = 'orange', linestyle = 'dashed', linewidth = 1)
+            plt.xlabel("time [s]")
+            plt.ylabel("CoT")
+            plt.title(f"Instant CoT of robot over the last {(10000-begin_cot)/1000} [s]")
 
+        cot_avg[sim, :] = speeds[4, begin_cot:]
 
 
     if plot_cpg:
         colors = np.array(["b", "g", "r", "c"])
 
         # fig = plt.figure("CPG")
-        fig = plt.figure(figsize =(8.5, 6))
-        subfigs = fig.subfigures(2, 2, wspace=0.07)
+        if sim == 0:
+            fig = plt.figure(figsize =(8.5, 6))
+            subfigs = fig.subfigures(2, 2, wspace=0.07)
 
-        labels = np.array(["time [s]", "amplitudes []"])
-        ax1 = subfigs[0, 0].subplots(4, sharex=True)
+            labels = np.array(["time [s]", "amplitudes []"])
+            ax1 = subfigs[0, 0].subplots(4, sharex=True)
 
-        subfigs[0, 0].suptitle("amplitude of oscillators (r)")
-        for i, ax in enumerate(ax1):
-            ax.plot(t[begin:], r[i, begin:], label = 'leg' + str(i), color = colors[i])
-            ax.grid(True)
-            if i == 1:
-                ax.set_ylabel(labels[1], loc="bottom")
-            ax.legend()
-        plt.xlabel(labels[0])
-        subfigs[0, 0].subplots_adjust(left = 0.15, hspace = 0.4, bottom = 0.15, right = 0.95)
+            subfigs[0, 0].suptitle("amplitude of oscillators (r)")
+            for i, ax in enumerate(ax1):
+                ax.plot(t[begin:], r[i, begin:], label = 'leg' + str(i), color = colors[i])
+                ax.grid(True)
+                if i == 1:
+                    ax.set_ylabel(labels[1], loc="bottom")
+                ax.legend()
+            plt.xlabel(labels[0])
+            subfigs[0, 0].subplots_adjust(left = 0.15, hspace = 0.4, bottom = 0.15, right = 0.95)
 
-        labels = np.array(["time [s]", "angles [rad]"])
-        ax2 = subfigs[0, 1].subplots(4, sharex=True)
-        subfigs[0, 1].suptitle("angles of oscillators (theta)")
-        for i, ax in enumerate(ax2):
-            ax.plot(t[begin:], theta[i, begin:], label = 'leg' + str(i), color = colors[i])
-            ax.grid(True)
-            if i == 1:
-                ax.set_ylabel(labels[1], loc="bottom")
-            ax.legend()
-        plt.xlabel(labels[0])
+            labels = np.array(["time [s]", "angles [rad]"])
+            ax2 = subfigs[0, 1].subplots(4, sharex=True)
+            subfigs[0, 1].suptitle("angles of oscillators (theta)")
+            for i, ax in enumerate(ax2):
+                ax.plot(t[begin:], theta[i, begin:], label = 'leg' + str(i), color = colors[i])
+                ax.grid(True)
+                if i == 1:
+                    ax.set_ylabel(labels[1], loc="bottom")
+                ax.legend()
+            plt.xlabel(labels[0])
 
-        labels = np.array(["time [s]", "derivate of amplitude []"])
-        ax3 = subfigs[1, 0].subplots(4, sharex=True)
-        subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
-        for i, ax in enumerate(ax3):
-            ax.plot(t[begin:], rdot[i, begin:], label = 'leg' + str(i), color = colors[i])
-            ax.grid(True)
-            if i == 1:
-                ax.set_ylabel(labels[1], loc="top")
-            ax.legend()
-        plt.xlabel(labels[0])
+            labels = np.array(["time [s]", "derivate of amplitude []"])
+            ax3 = subfigs[1, 0].subplots(4, sharex=True)
+            subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
+            for i, ax in enumerate(ax3):
+                ax.plot(t[begin:], rdot[i, begin:], label = 'leg' + str(i), color = colors[i])
+                ax.grid(True)
+                if i == 1:
+                    ax.set_ylabel(labels[1], loc="top")
+                ax.legend()
+            plt.xlabel(labels[0])
 
-        labels = np.array(["time [s]", "angular velocity [rad/s]"])
-        ax4 = subfigs[1, 1].subplots(4, sharex=True)
-        subfigs[1, 1].suptitle("Angular velocity (theta dot)")
-        for i, ax in enumerate(ax4):
-            ax.plot(t[begin:], theta_dot[i, begin:], label = 'leg' + str(i), color = colors[i])
-            ax.grid(True)
-            if i == 1:
-                ax.set_ylabel(labels[1], loc="top")
-            ax.legend()
-        plt.xlabel(labels[0])
+            labels = np.array(["time [s]", "angular velocity [rad/s]"])
+            ax4 = subfigs[1, 1].subplots(4, sharex=True)
+            subfigs[1, 1].suptitle("Angular velocity (theta dot)")
+            for i, ax in enumerate(ax4):
+                ax.plot(t[begin:], theta_dot[i, begin:], label = 'leg' + str(i), color = colors[i])
+                ax.grid(True)
+                if i == 1:
+                    ax.set_ylabel(labels[1], loc="top")
+                ax.legend()
+            plt.xlabel(labels[0])
 
         ##### Value comparison between desired and real##################################
 
-        # fig = plt.figure("Comparison values")
         fig = plt.figure(figsize =(10, 5))
         subfigs = fig.subfigures(1, 2, wspace=0.07)
 
         labels = np.array(["time [s]", "X [m]"])
         labels_positions = np.array(["x", "y", "z"])
         labels_joint = np.array(["hip", "thigh", "calf"])
-        # ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
         ax1 = subfigs[0].subplots(3, 1, sharex=True)
         subfigs[0].suptitle("foot positions")
         for i, ax in enumerate(ax1):
-            ax.plot(t[begin:], des_leg_pos[i, begin:], label = "desired leg position for " + labels_positions[i])
-            ax.plot(t[begin:], act_leg_pos[i, begin:], label = "actual leg position for " + labels_positions[i], color = "r")
+            ax.plot(t[begin:], des_leg_pos[i, begin:], label = "desired foot position for " + labels_positions[i])
+            ax.plot(t[begin:], act_leg_pos[i, begin:], label = "actual foot position for " + labels_positions[i], color = "r")
             ax.grid(True)
             if i == 1:
                 ax.set_ylabel(labels[1])
@@ -353,40 +378,98 @@ for sim in range(number_of_simulations):
         plt.xlabel(labels[0])
 
         labels = np.array(["time [s]", "joint angle [rad]"])
-        # ax2 = subfigs[1].subplots(3, sharex=True, sharey= True)
         ax2 = subfigs[1].subplots(3, sharex=True)
         subfigs[1].suptitle("joint positions")
         for i, ax in enumerate(ax2):
             ax.plot(t[begin:], des_joint_angles[i, begin:], label="desired joint position for joint " + labels_joint[i])
-            ax.plot(t[begin:], act_joint_angles[i, begin:], label="actual joint positionfor joint " + labels_joint[i], color="r")
+            ax.plot(t[begin:], act_joint_angles[i, begin:], label="actual joint position for joint " + labels_joint[i], color="r")
             ax.grid(True)
             if i == 1:
                 ax.set_ylabel(labels[1])
             ax.legend()
         plt.xlabel(labels[0], loc= 'center')
 
+        act_leg_pos_vector[sim, :, :] = act_leg_pos[:, begin:]
+        act_joint_angles_vector[sim, :, :] = act_joint_angles[:, begin:]
+
 ####################################################################################################################
-if plot_speed_vector:
-    fig, ax = plt.subplots(1, 2, figsize=(10, 4), gridspec_kw={'width_ratios': [2, 1]})
+if compare_PD:
 
+    #### speed comparison
+    fig, ax = plt.subplots(1, 2, figsize=(10, 3.5), gridspec_kw={'width_ratios': [2, 1]})
     for sim in range(number_of_simulations):
-        ax[0].plot(avg_vector[sim,:], label = "average speed for sim " + str(sim))
-        ax[1].plot(x_pos_vector[sim, :], y_pos_vector[sim, :], label = "trajectory for sim " + str(sim))
-
-
+        ax[0].plot(avg_vector[sim, :], label ="average speed " + print_mode[sim])
+        ax[1].plot(x_pos_vector[sim, :], y_pos_vector[sim, :], label ="trajectory " + print_mode[sim])
     ax[0].set(xlabel="time [s]", ylabel="speed [m/s]")
     ax[0].legend()
-    x_scale = 7
-    y_scale = 7
+    x_scale = 15
+    y_scale = 15
     ratio = x_scale/y_scale
+    ax[1].axvline(x=0, color = 'green', linestyle = 'dashdot', linewidth = 0.5)
+    ax[1].axhline(y=0, color = 'green', linestyle = 'dashdot', linewidth = 0.5)
     ax[1].set_xlim([-x_scale, x_scale])
     ax[1].set_ylim([-y_scale, y_scale])
     ax[1].set(xlabel="x displacement [m]", ylabel="y displacement [m]", label ="test")
     ax[1].title.set_text("X-Y Trajectory")
-    ax[1].set_box_aspect(1/ratio)
+    ax[1].set_aspect('equal', 'box')
     ax[1].legend()
+    fig.tight_layout()
 
-############################################################ plot######################################################
+    #### cot comparison
+    fig_cot = plt.figure()
+    for sim in range(number_of_simulations):
+        plt.plot(speeds[0, begin_cot:], cot_avg[sim, :], label="CoT " + print_mode[sim])
+    plt.xlabel("time [s]")
+    plt.ylabel("CoT")
+    plt.title(f"Instant CoT of robot over the last {(10000-begin_cot)/1000} [s]")
+    plt.legend()
+
+    #### foot pos comparison
+    handles = []
+    plot_labels = []
+    fig = plt.figure(figsize=(10, 5))
+    subfigs = fig.subfigures(1, 2, wspace=0.07)
+    labels = np.array(["time [s]", "X [m]"])
+    labels_positions = np.array(["x", "y", "z"])
+    labels_joint = np.array(["hip", "thigh", "calf"])
+    ax1 = subfigs[0].subplots(3, 1, sharex=True)
+    for i, ax in enumerate(ax1):
+        ax.set_title("actual foot positions for " + labels_positions[i])
+        for sim in range(number_of_simulations):
+            ax.plot(t[begin:], act_leg_pos_vector[sim, i, :], label= " " + print_mode[sim],
+                    color=color_mode[sim])
+        ax.grid(True)
+        if i == 1:
+            ax.set_ylabel(labels[1])
+            handles, plot_labels = ax.get_legend_handles_labels()
+            # print(handles)
+            # print(plot_labels)
+        # ax.legend()
+    subfigs[0].subplots_adjust(left=0.2, bottom=0.09, right=0.96, top=0.9)
+    plt.xlabel(labels[0])
+
+    labels = np.array(["time [s]", "joint angle [rad]"])
+    ax2 = subfigs[1].subplots(3, sharex=True)
+    for i, ax in enumerate(ax2):
+        ax.set_title("actual joint position for the " + labels_joint[i])
+        for sim in range(number_of_simulations):
+            ax.plot(t[begin:], act_joint_angles_vector[sim, i, :], label= " " + print_mode[sim],
+                    color=color_mode[sim])
+        ax.grid(True)
+        if i == 1:
+            ax.set_ylabel(labels[1])
+        # ax.legend()
+
+    subfigs[1].legend(handles, plot_labels, loc='lower right')
+
+    # subfigs[0].legend(handles, plot_labels, loc='center right')
+    # fig.axes[-1].legend( loc='lower right') #print_mode[sim] for sim in range(number_of_simulations)
+    plt.xlabel(labels[0], loc='center')
+
+
+############################################################
+# end of plot
+############################################################
 
 plt.show()
 

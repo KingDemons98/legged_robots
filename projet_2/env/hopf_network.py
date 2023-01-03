@@ -63,12 +63,15 @@ class HopfNetwork():
                 robot_height=0.3,        # in nominal case (standing) 
                 des_step_len=0.05,       # desired step length
                 max_step_len_rl=0.1,     # max step length, for RL scaling 
-                use_RL=False             # whether to learn parameters with RL 
+                use_RL=False,            # whether to learn parameters with RL
+               comparison=False
+
                 ):
     
     ###############
+    self.comparison = comparison
     # initialize CPG data structures: amplitude is row 0, and phase is row 1
-    if use_RL:
+    if use_RL and not self.comparison:
       self.X = np.zeros((3, 4))
       self.X_dot = np.zeros((3, 4))
     else:
@@ -89,7 +92,7 @@ class HopfNetwork():
     self.X[0,:] = np.random.rand(4) * .1
     # self.X[0,:] = np.ones((4)) * 0.1
     self.X[1,:] = self.PHI[0,:]
-    if use_RL:
+    if use_RL and not self.comparison:
       self.X[2, :] = np.random.rand(4) * .001#TODO init this
 
     # save body and foot shaping
@@ -161,7 +164,10 @@ class HopfNetwork():
         phi = self.X[2, i]
         x[i] = -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.cos(phi)
         # y[i] = sideSign[i] * foot_y -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
-        y[i]= -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
+        if self.comparison:
+          y[i] = sideSign[i] * foot_y
+        else:
+          y[i]= -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
 
       else:
         r = self.X[0, i]
@@ -251,22 +257,28 @@ class HopfNetwork():
     """ Hopf polar equations and integration, using quantities set by RL """
     # bookkeeping - save copies of current CPG states 
     X = self.X.copy()
-    X_dot_prev = self.X_dot.copy() 
-    X_dot = np.zeros((3,4))
+    X_dot_prev = self.X_dot.copy()
+    if self.comparison:
+      X_dot = np.zeros((2, 4))
+    else:
+      X_dot = np.zeros((3, 4))
 
     # loop through each leg's oscillator, find current velocities
     for i in range(4):
       # get r_i, theta_i from X
-      r, theta, phi = X[:,i]
+      if self.comparison:
+        r, theta = X[:, i]
+      else:
+        r, theta, phi = X[:, i]
       # amplitude (use mu from RL, i.e. self._mu_rl[i])
       r_dot = self._alpha * (self._mu_rl[i] - r **2) * r
       # phase (use omega from RL, i.e. self._omega_rl[i])
       theta_dot = self._omega_rl[i]
-
-      phi_dot = self._psi_rl[i]
-
-
-      X_dot[:,i] = [r_dot, theta_dot, phi_dot]
+      if not self.comparison:
+        phi_dot = self._psi_rl[i]
+        X_dot[:, i] = [r_dot, theta_dot, phi_dot]
+      else:
+        X_dot[:, i] = [r_dot, theta_dot]
 
     # integrate 
     self.X = X + (X_dot_prev + X_dot) * self._dt / 2

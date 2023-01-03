@@ -55,11 +55,11 @@ from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
 LEARNING_ALG = "SAC"
-EPISODE_LENGTH = 20
+EPISODE_LENGTH = 10
 
 #plot graphs or not
 ##########################################################################
-plot_cpg = True
+plot_cpg = False
 plot_foot_pos = True
 plot_speed_pos = True
 plot_training = True
@@ -78,8 +78,8 @@ motor_control_mode = "CPG"                   ##### SET MOTOR CONTROL HERE
 
 ############################################### CPG_RL ##########################################################
 env_config['motor_control_mode'] = motor_control_mode
-env_config['observation_space_mode'] = "CPG_RL"
-env_config['task_env'] = "TEST"
+env_config['observation_space_mode'] = "CPG_RL_COMPARISON"
+env_config['task_env'] = "FWD_LOCOMOTION"
 #################################################################################################################
 
 if motor_control_mode == "CPG":
@@ -124,7 +124,9 @@ else:
 
 # log_dir = interm_dir + 'CPGCPG_test_y_offset_only_in_cart_121722174616'    # try with y offset only for cart (not joint)
 
-log_dir = interm_dir + 'CPG_test_with_psi_limited_122122232452'
+# log_dir = interm_dir + 'CARTESIAN_PD_test_with_psi_limited_123122210132'            #comparison PPO - SAC: SAC
+
+# log_dir = interm_dir + 'CARTESIAN_PD_test_with_psi_limited_123122210204'            #comparison PPO - SAC: PPO
 
 # log_dir = interm_dir + 'CPG_CPG_y_corrected_try_without_cart121522141406'   #new try without cartesian
 
@@ -135,6 +137,10 @@ log_dir = interm_dir + 'CPG_test_with_psi_limited_122122232452'
 # log_dir = interm_dir + 'CPG_120622231142_best_run_yet'
 
 # log_dir = interm_dir + 'CPG_test_added_ztrain_to_actionS_121822171359'          #added z to action space
+
+log_dir = interm_dir + 'CPG_test_comparison_cpg_extended_010223214141'          #comparison: extended
+
+log_dir = interm_dir + 'CPG_test_comparison_cpg_basics_010223214040'          #comparison: basics
 ############################################################################################################################################################33
 
 

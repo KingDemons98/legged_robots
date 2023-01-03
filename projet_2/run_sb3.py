@@ -51,7 +51,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 
 LEARNING_ALG = "SAC" # or "SAC"
-LOAD_NN = True # if you want to initialize training with a previous model                   #HERE HERE HERE
+LOAD_NN = False # if you want to initialize training with a previous model                   #HERE HERE HERE
 NUM_ENVS = 10    # how many pybullet environments to create for data collection
 USE_GPU = True  # make sure to install all necessary drivers
 
@@ -66,8 +66,8 @@ motor_control_mode = "CPG"                          ##### SET MOTOR CONTROL HERE
 
 ######## test for CPG RL
 env_configs = {"motor_control_mode": motor_control_mode,
-               "observation_space_mode": "CPG_RL",
-               "task_env": "TEST",
+               "observation_space_mode": "CPG_RL_COMPARISON",
+               "task_env": "FWD_LOCOMOTION",
                # "test_env": True,
                # "render": True
                }
@@ -97,7 +97,7 @@ if LOAD_NN:
 
 # directory to save policies and normalization parameters
 # SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_test_env' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
-NAME = motor_control_mode + "_test_with_psi_limited_" + datetime.now().strftime("%m%d%y%H%M%S")
+NAME = motor_control_mode + "_test_comparison_cpg_extended_" + datetime.now().strftime("%m%d%y%H%M%S")
 SAVE_PATH = interm_dir + NAME + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
@@ -162,7 +162,7 @@ sac_config={"learning_rate":1e-4,
             "verbose":1, 
             "tensorboard_log":f"runs",
             "policy_kwargs": policy_kwargs,
-            "seed":None, 
+            "seed":1248,
             "device": gpu_arg}
 
 if LEARNING_ALG == "PPO":

@@ -97,7 +97,7 @@ if LOAD_NN:
 
 # directory to save policies and normalization parameters
 # SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_test_env' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
-NAME = motor_control_mode + "_test_comparison_cpg_extended_" + datetime.now().strftime("%m%d%y%H%M%S")
+NAME = motor_control_mode + "_test_comparison_cpg_basics_" + datetime.now().strftime("%m%d%y%H%M%S")
 SAVE_PATH = interm_dir + NAME + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically

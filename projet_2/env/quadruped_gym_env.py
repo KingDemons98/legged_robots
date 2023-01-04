@@ -671,8 +671,8 @@ class QuadrupedGymEnv(gym.Env):
       foot_vel = np.matmul(J, dq[3 * i:3 * i + 3])
       # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
 
-      tau_cart = np.matmul(np.transpose(J), np.matmul(kpCartesian, des_foot_pos - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
-      # tau_cart = np.matmul(np.transpose(J),  np.matmul(kpCartesian, Pd - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
+      # tau_cart = np.matmul(np.transpose(J), np.matmul(kpCartesian, des_foot_pos - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
+      tau_cart = np.matmul(np.transpose(J),  np.matmul(kpCartesian, Pd - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
       if BEST_RUN:
           tau_cart = np.matmul(np.transpose(J),  np.matmul(kpCartesian, Pd - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
       tau += tau_cart

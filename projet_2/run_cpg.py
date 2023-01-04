@@ -48,15 +48,15 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 ADD_CARTESIAN_PD = True
 TIME_STEP = 0.001
 foot_y = 0.0838 # this is the hip length 
-sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
+sideSign = np.array([-1, 1, -1, 1])  # get correct hip sign (body right is negative)
 
 gait = "TROT"
 
 ###### plots variable
-plots_speed = True
+plots_speed = False
 plot_cpg = True
-plot_CoT = True
-plot_torque = True
+plot_CoT = False
+plot_torque = False
 compare_PD = True
 test_cartesian = True
 test_joint = True
@@ -84,8 +84,8 @@ else:
 avg_vector = np.zeros([number_of_simulations, TEST_STEPS])
 x_pos_vector = np.zeros([number_of_simulations, TEST_STEPS])
 y_pos_vector = np.zeros([number_of_simulations, TEST_STEPS])
-begin = 9000 # for the plots
-begin_cot = 9500 # for the plots
+begin = 9000  # for the plots
+begin_cot = 9500  # for the plots
 
 cot_compare = np.zeros([number_of_simulations, TEST_STEPS-begin_cot])
 act_leg_pos_vector = np.zeros((number_of_simulations, 3, TEST_STEPS-begin))
@@ -101,14 +101,14 @@ legs = ["Front left", "Front right", "Rear Left", "Rear Right"]
 
 for sim in range(number_of_simulations):
     env = QuadrupedGymEnv(render=False,             # visualize
-                        on_rack=False,              # useful for debugging!
-                        isRLGymInterface=False,     # not using RL
-                        time_step=TIME_STEP,
-                        action_repeat=1,
-                        motor_control_mode="TORQUE",
-                        add_noise=False,    # start in ideal conditions
-                        # record_video=True
-                        )
+                          on_rack=False,              # useful for debugging!
+                          isRLGymInterface=False,     # not using RL
+                          time_step=TIME_STEP,
+                          action_repeat=1,
+                          motor_control_mode="TORQUE",
+                          add_noise=False,    # start in ideal conditions
+                          # record_video=True
+                          )
     if compare_PD:
         if sim == 0:
             test_cartesian = True
@@ -143,7 +143,7 @@ for sim in range(number_of_simulations):
     des_leg_pos = np.zeros((3, TEST_STEPS))
     act_leg_pos = np.zeros((3, TEST_STEPS))
 
-    des_joint_angles = np.zeros((3, TEST_STEPS)) #peut etre pas suffisant
+    des_joint_angles = np.zeros((3, TEST_STEPS))
     act_joint_angles = np.zeros((3, TEST_STEPS))
 
     r = np.zeros((4, TEST_STEPS))
@@ -230,7 +230,7 @@ for sim in range(number_of_simulations):
             action[3*i:3*i+3] = tau
         # send torques to robot and simulate TIME_STEP seconds
         env.step(action)
-    compare_torque[:,sim,:] = torque_plot
+    compare_torque[:, sim, :] = torque_plot
 
     ######################################################
     # PLOTS
@@ -242,7 +242,7 @@ for sim in range(number_of_simulations):
         if i < TEST_STEPS-(int(n/2)-1):
             avg[i] = np.average(speeds[1, int(i-n/2):int(i+n/2)]) # we find the moving average of the n/2 prev and next
         else:
-            avg[i] = avg[i-1] # to avoid array problems we just copy the precedent value
+            avg[i] = avg[i-1]  # to avoid array problems we just copy the precedent value
 
 
     # Mobile average of the speeds for smoothing
@@ -253,7 +253,7 @@ for sim in range(number_of_simulations):
         if i < TEST_STEPS-(int(n/2)-1):
             avg[i] = np.average(speeds[1, int(i-n/2):int(i+n/2)]) # we find the moving average of the n/2 prev and next
         else:
-            avg[i] = avg[i-1] # to avoid array problems we just copy the precedent value
+            avg[i] = avg[i-1]  # to avoid array problems we just copy the precedent value
 
     print(f"speed after convergence: {avg[-1]}[m/s]")
 
@@ -311,13 +311,16 @@ for sim in range(number_of_simulations):
             plt.savefig("Pictures/" + plt.get_current_fig_manager().get_window_title() + ".png")
         plt.figure()
         if compare_PD:
-            plt.get_current_fig_manager().set_window_title("CoT " + print_mode[sim])
+            mode = sim
         else:
-            plt.get_current_fig_manager().set_window_title("CoT " + print_mode[pd_no_compare])
+            mode = pd_no_compare
+
+        plt.get_current_fig_manager().set_window_title("CoT " + print_mode[mode])
 
         plt.plot(speeds[0, begin_cot:], speeds[4, begin_cot:])
         avg_cot = np.average(speeds[4, begin_cot:])
         plt.axhline(y=avg_cot, color = 'orange', linestyle = 'dashed', linewidth = 1)
+        print("average Cot is : ",  avg_cot, " ", print_mode[mode])
         plt.xlabel("time [s]")
         plt.ylabel("CoT")
         plt.title(f"Instant CoT of robot over the last {(10000-begin_cot)/1000} [s]")
@@ -339,7 +342,7 @@ for sim in range(number_of_simulations):
 
             subfigs[0, 0].suptitle("amplitude of oscillators (r)")
             for i, ax in enumerate(ax1):
-                ax.plot(t[begin:], r[i, begin:], label = 'leg' + str(i), color = colors[i])
+                ax.plot(t[:], r[i, :], label = 'leg' + str(i), color = colors[i])
                 ax.grid(True)
                 if i == 1:
                     ax.set_ylabel(labels[1], loc="bottom")
@@ -349,7 +352,7 @@ for sim in range(number_of_simulations):
 
             labels = np.array(["time [s]", "angles [rad]"])
             ax2 = subfigs[0, 1].subplots(4, sharex=True)
-            subfigs[0, 1].suptitle("angles of oscillators (theta)")
+            subfigs[0, 1].suptitle(r"angles of oscillators ($\theta$)")
             for i, ax in enumerate(ax2):
                 ax.plot(t[begin:], theta[i, begin:], label = 'leg' + str(i), color = colors[i])
                 ax.grid(True)
@@ -360,9 +363,9 @@ for sim in range(number_of_simulations):
 
             labels = np.array(["time [s]", "derivate of amplitude"])
             ax3 = subfigs[1, 0].subplots(4, sharex=True)
-            subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
+            subfigs[1, 0].suptitle(r"derivative of amplitude ($\dot r$)")
             for i, ax in enumerate(ax3):
-                ax.plot(t[begin:], rdot[i, begin:], label = 'leg' + str(i), color = colors[i])
+                ax.plot(t[:], rdot[i, :], label = 'leg' + str(i), color = colors[i])
                 ax.grid(True)
                 if i == 1:
                     ax.set_ylabel(labels[1], loc="top")
@@ -371,7 +374,7 @@ for sim in range(number_of_simulations):
 
             labels = np.array(["time [s]", "angular velocity [rad/s]"])
             ax4 = subfigs[1, 1].subplots(4, sharex=True)
-            subfigs[1, 1].suptitle("Angular velocity (theta dot)")
+            subfigs[1, 1].suptitle(r"Angular velocity ($\dot \theta$)")
             for i, ax in enumerate(ax4):
                 ax.plot(t[begin:], theta_dot[i, begin:], label = 'leg' + str(i), color = colors[i])
                 ax.grid(True)
@@ -391,7 +394,7 @@ for sim in range(number_of_simulations):
             plt.get_current_fig_manager().set_window_title("foot & angle position " + print_mode[pd_no_compare])
         subfigs = fig.subfigures(1, 2, wspace=0.07)
 
-        labels = np.array(["time [s]", "X [m]"])
+        labels = np.array(["time [s]", "Position [m]"])
         ax1 = subfigs[0].subplots(3, 1, sharex=True)
         subfigs[0].suptitle("foot positions")
         for i, ax in enumerate(ax1):
@@ -493,7 +496,7 @@ if compare_PD:
     fig = plt.figure(figsize=(10, 5))
     plt.get_current_fig_manager().set_window_title("Foot position & Joint angle comparison")
     subfigs = fig.subfigures(1, 2, wspace=0.07)
-    labels = np.array(["time [s]", "X [m]"])
+    labels = np.array(["time [s]", "Position [m]"])
     ax1 = subfigs[0].subplots(3, 1, sharex=True)
     for i, ax in enumerate(ax1):
         ax.set_title("actual foot positions for " + labels_positions[i])
@@ -531,14 +534,13 @@ if compare_PD:
     fig_torque.suptitle("Torque's comparison with different PD's  with the " + legs[idx] + " leg", fontsize=16)
     # this time we only look at one leg, but 3 different PD
 
-    for sim in range(number_of_simulations):
-        for m in range(len(labels_joint)):
-            ax[sim].plot(t[begin_cot:], compare_torque[m, sim, begin_cot:],
-                       label="Torque for the joint on the " + labels_joint[m],
-                       color=colors[m])
+    for m in range(len(labels_joint)):
+        for sim in range(number_of_simulations):
+            ax[m].plot(t[begin_cot:], compare_torque[3*idx + m, sim, begin_cot:], label="Torque " + print_mode[sim],
+                       color=colors[sim])
 
-        ax[sim].grid(True)
-        ax[sim].set_title("Torque " + print_mode[sim])
+        ax[m].grid(True)
+        ax[m].set_title("Torque for the joint on the " + labels_joint[m])
 
     fig_torque.subplots_adjust(hspace=0.45)
     lines, labels_torque = ax[0].get_legend_handles_labels()

@@ -62,9 +62,9 @@ sideSign = np.array([-1, 1, -1, 1])  # get correct hip sign (body right is negat
 # then replace the parameter in the code by opt.new_val
 
 
-optimization = True
+optimization = False
 
-start_val = 50
+start_val = 220
 opti_slow = True  # slow if you want to optimize for slower speed, anything else for faster
 nb_run_opt = 20
 
@@ -75,9 +75,9 @@ gait = "TROT"
 begin = 8000  # starting value for most plot that don't start at 0
 begin_cot = 7500  # starting value for the zoomed plot, and the torque for high speed
 
-plots_speed = False
+plots_speed = True
 plot_cpg = False
-plot_CoT = False
+plot_CoT = True
 plot_torque = False
 compare_PD = False
 test_cartesian = True
@@ -147,8 +147,9 @@ for sim in range(number_of_simulations):
 
         # initialize Hopf Network, supply gait
     if(gait == "TROT"):
-        cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT", omega_swing=2.4 * 2 * np.pi, omega_stance=0.9 * 2 * np.pi,
-                          ground_penetration=0.008, alpha =41.9, ground_clearance=0.1, robot_height=0.315,  des_step_len = 0.049)
+        cpg = HopfNetwork(time_step=TIME_STEP*2, gait="TROT", omega_swing=2.4 * 2 * np.pi, omega_stance=0.9 * 2 * np.pi,
+                          ground_penetration=0.008, alpha =41.9, ground_clearance=0.1, robot_height=0.315,
+                          des_step_len = 0.049)
     elif(gait == "BOUND"):
         cpg = HopfNetwork(time_step=TIME_STEP, gait="BOUND", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
     elif(gait == "WALK"):
@@ -181,8 +182,8 @@ for sim in range(number_of_simulations):
     kp=np.array([100,100,100])
     kd=np.array([2,2,2])
     # Cartesian PD gains
-    kpCartesian = np.diag([275.0]*3)  # 570 ca marche bien
-    kdCartesian = np.diag([opt.new_val]*3)  # 19.025
+    kpCartesian = np.diag([44]*3)
+    kdCartesian = np.diag([57.42188]*3)  # 19.025
 
     speeds = np.empty([5, TEST_STEPS]) # contains time, speed, Xpos,Ypos,CoT
     mass = np.sum(env.robot.GetTotalMassFromURDF())

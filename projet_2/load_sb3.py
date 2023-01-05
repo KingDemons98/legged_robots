@@ -285,7 +285,7 @@ if plot_CoT:
 # Plot foot positions current and desired and foot torques current and desired
 if plot_foot_pos:
     fig = plt.figure(figsize=(10, 8))
-    plt.subplots_adjust(left=0.15)
+
     fig.suptitle("Desired positions vs actual position and desired torque vs actual torque")
     subfigs = fig.subfigures(1, 2, wspace=0.07)
 
@@ -294,6 +294,7 @@ if plot_foot_pos:
 
     ax1 = subfigs[0].subplots(3, 1, sharex=True)
     subfigs[0].suptitle("Position desired vs actual")
+    subfigs[0].subplots_adjust(left=0.20, hspace=0.4, bottom=0.15, right=0.95)
     for i, ax in enumerate(ax1):
         ax.plot(t, des_leg_pos_tab[:, i], label="desired leg position for " + labels_positions[i])
         ax.plot(t, leg_pos_tab[:, i], label="actual leg position for " + labels_positions[i], color="r")
@@ -308,6 +309,7 @@ if plot_foot_pos:
 
     ax2 = subfigs[1].subplots(3, 1, sharex=True)
     subfigs[1].suptitle("Torque desired vs actual")
+    subfigs[1].subplots_adjust(left=0.15, hspace=0.4, bottom=0.15, right=0.95)
     for i, ax in enumerate(ax2):
         ax.plot(t, des_leg_torque_tab[:, i], label="desired leg torque for " + labels_joint[i])
         ax.plot(t, leg_torque_tab[:, i], label="actual leg torque for " + labels_joint[i], color="r")
@@ -319,13 +321,14 @@ if plot_foot_pos:
 
 # Plot robot speed on x, y and z and its position displacement
 if plot_speed_pos:
-    fig = plt.figure()
+    fig = plt.figure(figsize=(10, 6))
     fig.suptitle("Speeds and displacement")
     labels = np.array(["time [s]", "speed [m/s]"])
     subfigs = fig.subfigures(1, 2, wspace=0.07)
     labels_speed = np.array(["Vx", "Vy", "Vz"])
     ax1 = subfigs[0].subplots(3, sharex=True)
     subfigs[0].suptitle("Speeds in x,y and z")
+    subfigs[0].subplots_adjust(left=0.20, hspace=0.4, bottom=0.15, right=0.95)
     for i, ax in enumerate(ax1):
         ax.plot(t, robot_speed_tab[:, i], label=labels_speed[i])
         ax.legend()
@@ -336,8 +339,23 @@ if plot_speed_pos:
     labels = np.array(["x position", "y position"])
     ax2 = subfigs[1].subplots(1)
     subfigs[1].suptitle("Displacement")
+    subfigs[1].subplots_adjust(left=0.15, hspace=0.4, bottom=0.15, right=0.95)
     ax2.plot(robot_pos_tab[:, 0], robot_pos_tab[:, 1])
     ax2.set_xlabel(labels[0])
     ax2.set_ylabel(labels[1])
 
+speed_xy = robot_speed_tab[:, :2]
+lin_speed = np.sum(np.abs(speed_xy)**2, axis=-1)**(1./2)
+print(f"max speed is {lin_speed.max()} [m/s]")
+
+n = 100
+avg_cot = np.mean(CoT_tab[-100:])
+
+print(f"Cost of transport over the last {n} values of the run: {avg_cot}")
+
 plt.show()
+
+
+
+
+

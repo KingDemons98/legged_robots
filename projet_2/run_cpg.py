@@ -149,8 +149,6 @@ for sim in range(number_of_simulations):
     if(gait == "TROT"):
         cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT", omega_swing=2.4 * 2 * np.pi, omega_stance=0.9 * 2 * np.pi,
                           ground_penetration=0.008, alpha =41.9, ground_clearance=0.1, robot_height=0.315,  des_step_len = 0.049)
-        # cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT", omega_swing=2.4 * 2 * np.pi, omega_stance=0.9 * 2 * np.pi,
-        #                   ground_penetration=0.008, alpha =45, ground_clearance=0.1, robot_height=0.32,  des_step_len = 0.058)
     elif(gait == "BOUND"):
         cpg = HopfNetwork(time_step=TIME_STEP, gait="BOUND", omega_swing=5 * 2 * np.pi, omega_stance=2 * 2 * np.pi)
     elif(gait == "WALK"):

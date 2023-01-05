@@ -50,8 +50,8 @@ from utils.file_utils import get_latest_model
 from env.quadruped_gym_env import QuadrupedGymEnv
 
 
-LEARNING_ALG = "SAC" # or "SAC"
-LOAD_NN = False # if you want to initialize training with a previous model                   #HERE HERE HERE
+LEARNING_ALG = "SAC"  # or "PPO"
+LOAD_NN = False  # if you want to initialize training with a previous model                   #HERE HERE HERE
 NUM_ENVS = 10    # how many pybullet environments to create for data collection
 USE_GPU = True  # make sure to install all necessary drivers
 
@@ -64,15 +64,12 @@ USE_GPU = True  # make sure to install all necessary drivers
 
 motor_control_mode = "CPG"                          ##### SET MOTOR CONTROL HERE
 
-######## test for CPG RL
 env_configs = {"motor_control_mode": motor_control_mode,
                "observation_space_mode": "CPG_RL",
                "task_env": "FWD_LOCOMOTION",
                "test_env": False,
                # "render": True
                }
-###########################################
-# env_configs = {}
 
 if motor_control_mode == "CPG":
     interm_dir = "./logs/intermediate_models_cpg/"

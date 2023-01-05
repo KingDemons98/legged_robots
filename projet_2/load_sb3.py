@@ -55,12 +55,12 @@ from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
 LEARNING_ALG = "SAC"
-EPISODE_LENGTH = 20
+EPISODE_LENGTH = 10
 
 #plot graphs or not
 #########################################################################
 plot_cpg = True
-plot_foot_pos = False
+plot_foot_pos_torque = True
 plot_speed_pos = True
 plot_training = True
 plot_CoT = True
@@ -70,7 +70,7 @@ plot_CoT = True
 # check ideal conditions, as well as robustness to UNSEEN noise during training
 ##########################################################################
 env_config = {}
-env_config['render'] = True
+env_config['render'] = False
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 env_config['competition_env'] = True
@@ -164,6 +164,7 @@ for i in range(100 * EPISODE_LENGTH):
         base_pos = np.array(env.envs[0].env.robot.GetBasePosition()).reshape(1, -1)
         _, curr_leg_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(0) # leg 0
         curr_leg_pos = np.array(curr_leg_pos).reshape(1, -1)
+        des_leg_torque = np.array(env.envs[0].env.get_des_torques[:3]).reshape(1, -1)
 
 
         # CoT computation
@@ -179,6 +180,7 @@ for i in range(100 * EPISODE_LENGTH):
         leg_pos_tab = np.append(leg_pos_tab, curr_leg_pos, axis=0)
         CoT_tab = np.append(CoT_tab, CoT, axis=0)
         leg_torque_tab = np.append(leg_torque_tab, torques, axis=0)
+        des_leg_torque_tab = np.append(des_leg_torque_tab, des_leg_torque, axis=0)
 
 
     if motor_control_mode == "CPG":
@@ -198,9 +200,7 @@ for i in range(100 * EPISODE_LENGTH):
 
     elif motor_control_mode == "CARTESIAN_PD":
         new_des_leg_pos = np.array(env.envs[0].env.get_des_pos[:3]).reshape(1, -1)
-        des_leg_torque = np.array(env.envs[0].env.get_des_torques[:3]).reshape(1, -1)
         des_leg_pos_tab = np.append(des_leg_pos_tab, new_des_leg_pos, axis=0)
-        des_leg_torque_tab = np.append(des_leg_torque_tab, des_leg_torque, axis=0)
     else:
         print("graphs were not implemented for joint PD")
         plot_cpg = False
@@ -276,7 +276,7 @@ if plot_CoT:
     plt.ylabel("instant CoT [-]")
 
 # Plot foot positions current and desired and foot torques current and desired
-if plot_foot_pos:
+if plot_foot_pos_torque:
     fig = plt.figure(figsize=(10, 8))
 
     fig.suptitle("Desired positions vs actual position and desired torque vs actual torque")

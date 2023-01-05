@@ -569,8 +569,7 @@ class QuadrupedGymEnv(gym.Env):
     mus = self._scale_helper(u[4:8], MU_LOW**2, MU_UPP**2)
     self._cpg.set_mu_rl(mus)
 
-    # psis = self._scale_helper(u[8:12], -1.5*2*np.pi, 1.5*2*np.pi)
-    psis = self._scale_helper(u[8:12], -0.1, 0.1)
+    psis = self._scale_helper(u[8:12], -1.5*2*np.pi, 1.5*2*np.pi)
 
     self._cpg.set_psi_rl(psis)
 
@@ -637,6 +636,8 @@ class QuadrupedGymEnv(gym.Env):
       tau += tau_cart
 ########################################################################################################################
       action[3*i:3*i+3] = tau
+
+    self.get_des_torques = action
 
     return action
 

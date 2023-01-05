@@ -38,6 +38,8 @@ from datetime import datetime
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.env_util import make_vec_env
+import wandb
+from wandb.integration.sb3 import WandbCallback
 
 import stable_baselines3.common.noise as sb3_noise
 
@@ -53,7 +55,7 @@ LOAD_NN = False # if you want to initialize training with a previous model      
 NUM_ENVS = 10    # how many pybullet environments to create for data collection
 USE_GPU = True  # make sure to install all necessary drivers
 
-# after implementing, you will want to test how well the agent learns with your MDP: 
+# after implementing, you will want to test how well the agent learns with your MDP:
 # env_configs = {"motor_control_mode":"CPG",
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "LR_COURSE_OBS"}
@@ -64,8 +66,8 @@ motor_control_mode = "CPG"                          ##### SET MOTOR CONTROL HERE
 
 ######## test for CPG RL
 env_configs = {"motor_control_mode": motor_control_mode,
-               "observation_space_mode": "CPG_RL",
-               "task_env": "LR_COURSE_TASK",
+               "observation_space_mode": "CPG_RL_COMPARISON",
+               "task_env": "FWD_LOCOMOTION",
                # "test_env": True,
                # "render": True
                }
@@ -89,18 +91,19 @@ else:
 
 if LOAD_NN:
     # interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'cpg_rl_test_env120522213221'                # put the name of last model here
+    log_dir = interm_dir + 'CPG_test_with_psi_limited_122122142414'                # put the name of last model here
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
 # SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_test_env' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
-SAVE_PATH = interm_dir + motor_control_mode + "_" + datetime.now().strftime("%m%d%y%H%M%S") + '/'
+NAME = motor_control_mode + "_test_comparison_cpg_basics_" + datetime.now().strftime("%m%d%y%H%M%S")
+SAVE_PATH = interm_dir + NAME + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
 checkpoint_callback = CheckpointCallback(save_freq=20000//NUM_ENVS, save_path=SAVE_PATH, name_prefix='rl_model', verbose=2)
 # create Vectorized gym environment
-env = lambda: QuadrupedGymEnv(**env_configs)  
+env = lambda: QuadrupedGymEnv(**env_configs)
 env = make_vec_env(env, monitor_dir=SAVE_PATH, n_envs=NUM_ENVS)
 # normalize observations to stabilize learning (why?)
 
@@ -110,25 +113,36 @@ if LOAD_NN:
 else:
     env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=100.)
 
-# Multi-layer perceptron (MLP) policy of two layers of size _,_ 
-policy_kwargs = dict(net_arch=[256,256])
+run = wandb.init(
+    name=NAME,
+    project="Project legged robots GJJ",
+    config=env_configs,
+    sync_tensorboard=True,
+    monitor_gym=False,
+    save_code=False,
+)
+
+run.config.update({"LOAD_NN":LOAD_NN})
+
+# Multi-layer perceptron (MLP) policy of two layers of size _,_
+policy_kwargs = dict(net_arch=[256, 256])
 # What are these hyperparameters? Check here: https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html
-n_steps = 4096 
-learning_rate = lambda f: 1e-4 
-ppo_config = {  "gamma":0.99, 
-                "n_steps": int(n_steps/NUM_ENVS), 
-                "ent_coef":0.0, 
-                "learning_rate":learning_rate, 
+n_steps = 4096
+learning_rate = lambda f: 1e-4
+ppo_config = {  "gamma":0.99,
+                "n_steps": int(n_steps/NUM_ENVS),
+                "ent_coef":0.0,
+                "learning_rate":learning_rate,
                 "vf_coef":0.5,
-                "max_grad_norm":0.5, 
-                "gae_lambda":0.95, 
+                "max_grad_norm":0.5,
+                "gae_lambda":0.95,
                 "batch_size":128,
-                "n_epochs":10, 
-                "clip_range":0.2, 
+                "n_epochs":10,
+                "clip_range":0.2,
                 "clip_range_vf":1,
-                "verbose":1, 
-                "tensorboard_log":None, 
-                "_init_setup_model":True, 
+                "verbose":1,
+                "tensorboard_log":f"runs",
+                "_init_setup_model":True,
                 "policy_kwargs":policy_kwargs,
                 "device": gpu_arg}
 
@@ -139,34 +153,36 @@ ppo_config = {  "gamma":0.99,
 sac_config={"learning_rate":1e-4,
             "buffer_size":300000,
             "batch_size":256,
-            "ent_coef":'auto', 
-            "gamma":0.99, 
+            "ent_coef":'auto',
+            "gamma":0.99,
             "tau":0.005,
-            "train_freq":1, 
+            "train_freq":1,
             "gradient_steps":1,
             "learning_starts": 10000,
-            "verbose":1, 
-            "tensorboard_log":None,
+            "verbose":1,
+            "tensorboard_log":f"runs",
             "policy_kwargs": policy_kwargs,
-            "seed":None, 
+            "seed":1248,
             "device": gpu_arg}
 
 if LEARNING_ALG == "PPO":
     model = PPO('MlpPolicy', env, **ppo_config)
+    run.config.update(ppo_config)
 elif LEARNING_ALG == "SAC":
     model = SAC('MlpPolicy', env, **sac_config)
+    run.config.update(sac_config)
 else:
     raise ValueError(LEARNING_ALG + 'not implemented')
 
 if LOAD_NN:
     if LEARNING_ALG == "PPO":
-        model = PPO.load(model_name, env)
+        model = PPO.load(model_name, env, **{"tensorboard_log":f"runs"})
     elif LEARNING_ALG == "SAC":
-        model = SAC.load(model_name, env)
+        model = SAC.load(model_name, env, **{"tensorboard_log":f"runs"})
     print("\nLoaded model", model_name, "\n")
 
 # Learn and save (may need to train for longer)
-model.learn(total_timesteps=1000000, log_interval=1, callback=checkpoint_callback)
+model.learn(total_timesteps=1000000, log_interval=1, callback=[WandbCallback(), checkpoint_callback])
 # Don't forget to save the VecNormalize statistics when saving the agent
 model.save(os.path.join(SAVE_PATH, "rl_model") )
 env.save(os.path.join(SAVE_PATH, "vec_normalize.pkl"))

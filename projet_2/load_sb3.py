@@ -70,8 +70,8 @@ motor_control_mode = "CPG"                   ##### SET MOTOR CONTROL HERE
 
 ############################################### CPG_RL ##########################################################
 env_config['motor_control_mode'] = motor_control_mode
-env_config['observation_space_mode'] = "CPG_RL"
-env_config['task_env'] = "TEST"
+env_config['observation_space_mode'] = "CPG_RL_COMPARISON"
+env_config['task_env'] = "FWD_LOCOMOTION"
 #################################################################################################################
 
 if motor_control_mode == "CPG":
@@ -81,13 +81,13 @@ elif motor_control_mode == "CARTESIAN_PD":
 elif motor_control_mode == "PD":
     interm_dir = "./logs/intermediate_models_pd/"
 else:
-    interim_dir = "./logs/intermediate_models/"
+    interm_dir = "./logs/intermediate_models/"
 
 
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '112622123152'
 # log_dir = interm_dir + 'cpg_rl_120122090257'                #supposed to work but already a t 1.5?
-log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is the last one with 1.0
+# log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is the last one with 1.0
 # log_dir = interm_dir + 'cpg_rl_112822072518'
 # log_dir = interm_dir + 'cpg_rl_test_env120622075011'            #test avec obstacles en train
 # log_dir = interm_dir + 'cpg_rl_120522113944'
@@ -97,7 +97,7 @@ log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is
 
 # log_dir = interm_dir + 'cpg_rl_120322171241'            #test with in y, might work
 
-
+log_dir = interm_dir + 'CPG_test_comparison_cpg_basics_010423075935'
 
 
 

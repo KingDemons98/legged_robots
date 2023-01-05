@@ -73,7 +73,7 @@ env_config = {}
 env_config['render'] =  False
 env_config['record_video'] = False
 env_config['add_noise'] = False 
-env_config['competition_env'] = False            #### SET COMPET ENV HERE
+env_config['competition_env'] = True            #### SET COMPET ENV HERE
 # env_config['test_env'] = True
 
 motor_control_mode = "CARTESIAN_PD"                   ##### SET MOTOR CONTROL HERE
@@ -102,23 +102,53 @@ else:
 # log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is the last one with 1.0
 # log_dir = interm_dir + 'cpg_rl_112822072518'
 # log_dir = interm_dir + 'cpg_rl_test_env120622075011'            #test avec obstacles en train
-# log_dir = interm_dir + 'CPG_120622231142'                          # fonctionne bien!
 # log_dir = interm_dir + 'CPG_120622193517'                           # 2eme avec nouveaux cpg?
 # log_dir = interm_dir + 'CPG_120822101153'                       #moving in y but not ok yet
 
 # log_dir = interm_dir + 'CPG_120822174454'            # new reward fct avec deplacement en y
 
+# log_dir = interm_dir + 'CPG_cart_solve_y_121222100704'      #maybe the right for y
+
+# log_dir = interm_dir + 'CPG_cart_solve_y_121122161834'
+
+# log_dir = interm_dir + 'CPG_y_displacement_121322165520'
+
+# log_dir = interm_dir + 'CPG_y_displacement_121422150803'            #test with in y, might work
+##########################################################################################################################################################################
+
+# log_dir = interm_dir + 'CPG_test_best_run_follow_new_rwd_121822234256'
+
+# log_dir = interm_dir + 'CPG_120822174454'            # new reward fct avec deplacement en y
+
+# log_dir = interm_dir + 'CPG_best_run_follow_121022163418'       #funny but bad
+
+# log_dir = interm_dir + 'CPG_test_old_y_121522221641'
+
+# log_dir = interm_dir + 'CPG_test_y_offset_in_hopf121722100211'          #try with y offset in hopf
+
+# log_dir = interm_dir + 'CPGCPG_test_y_offset_only_in_cart_121722174616'    # try with y offset only for cart (not joint)
+
+log_dir = interm_dir + 'CPG_test_with_psi_limited_122122232452'
+
+# log_dir = interm_dir + 'CPG_CPG_y_corrected_try_without_cart121522141406'   #new try without cartesian
+
+# log_dir = interm_dir + 'CPG_cpg_backward_121222204813'          #backward
+
+# log_dir = interm_dir + 'CPG_121022113942'            #test with in y, might work
 
 log_dir = interm_dir + 'CARTESIAN_PD_cartesian_rwd_old_scaling_121922150148 - speedy'            #test with in y, might work
 
+# log_dir = interm_dir + 'CPG_test_added_ztrain_to_actionS_121822171359'          #added z to action space
+############################################################################################################################################################33
 
 
 # # get latest model and normalization stats, and plot
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
 model_name = get_latest_model(log_dir)
 monitor_results = load_results(log_dir)
-print(monitor_results)
-plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
+if plot_training:
+    print(monitor_results)
+    plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
 # plt.show()
 
 # reconstruct env 
@@ -229,6 +259,7 @@ if plot_cpg and motor_control_mode == "CPG":
     subfigs = fig.subfigures(2, 2, wspace=0.07)
 
     labels = np.array(["time [s]", "amplitudes"])
+    labels = np.array(["time [s]", "amplitudes"])
     ax1 = subfigs[0, 0].subplots(4, sharex=True)
     subfigs[0, 0].suptitle("amplitude of oscillators (r)")
     for i, ax in enumerate(ax1):
@@ -250,6 +281,7 @@ if plot_cpg and motor_control_mode == "CPG":
         ax.legend()
     plt.xlabel(labels[0])
 
+    labels = np.array(["time [s]", "derivate of amplitude"])
     labels = np.array(["time [s]", "derivate of amplitude"])
     ax3 = subfigs[1, 0].subplots(4, sharex=True)
     subfigs[1, 0].suptitle("derivative of amplitude (r dot)")

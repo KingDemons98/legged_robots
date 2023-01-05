@@ -127,7 +127,7 @@ run = wandb.init(
 run.config.update({"LOAD_NN":LOAD_NN})
 
 # Multi-layer perceptron (MLP) policy of two layers of size _,_ 
-policy_kwargs = dict(net_arch=[256,256])
+policy_kwargs = dict(net_arch=[256, 256])
 # What are these hyperparameters? Check here: https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html
 n_steps = 4096 
 learning_rate = lambda f: 1e-4 

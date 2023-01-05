@@ -261,7 +261,7 @@ for sim in range(number_of_simulations):
         fig = plt.figure()
         subfigs = fig.subfigures(2, 2, wspace=0.07)
 
-        labels = np.array(["time [s]", "amplitudes []"])
+        labels = np.array(["time [s]", "amplitudes"])
         ax1 = subfigs[0, 0].subplots(4, sharex=True)
         subfigs[0, 0].suptitle("amplitude of oscillators (r)")
         for i, ax in enumerate(ax1):
@@ -283,7 +283,7 @@ for sim in range(number_of_simulations):
             ax.legend()
         plt.xlabel(labels[0])
 
-        labels = np.array(["time [s]", "derivate of amplitude []"])
+        labels = np.array(["time [s]", "derivate of amplitude"])
         ax3 = subfigs[1, 0].subplots(4, sharex=True)
         subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
         for i, ax in enumerate(ax3):

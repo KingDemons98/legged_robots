@@ -595,6 +595,8 @@ class QuadrupedGymEnv(gym.Env):
 
     # scale omega to ranges, and set in CPG (range is an example)
     omega = self._scale_helper(u[0:4], 0, 4.5*2*np.pi)
+    if comparison:
+        omega = self._scale_helper(u[0:4], 5, 4.5 * 2 * np.pi)
     self._cpg.set_omega_rl(omega)
 
     # scale mu to ranges, and set in CPG (squared since we converge to the sqrt in the CPG amplitude)

@@ -140,7 +140,7 @@ else:
 
 # log_dir = interm_dir + 'CPG_test_comparison_cpg_extended_010223214141'          #comparison: extended
 
-log_dir = interm_dir + 'CPG_test_comparison_cpg_basics_010323223423'          #comparison: basics
+log_dir = interm_dir + 'CPG_test_comparison_cpg_basics_010423075935'          #comparison: basics
 ############################################################################################################################################################33
 
 

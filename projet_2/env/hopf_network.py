@@ -153,7 +153,10 @@ class HopfNetwork():
     
     # map CPG variables to Cartesian foot xz positions (Equations 8, 9) 
     x = np.zeros(4)
-    y = np.zeros(4)
+    if not self.comparison:
+      y = np.zeros(4)
+    else:
+      y = np.zeros(3)
     z = np.zeros(4)
     if self.use_RL:
       r = np.clip(self.X[0, :], MU_LOW, MU_UPP)

@@ -74,16 +74,16 @@ env_configs = {"motor_control_mode": motor_control_mode,
 ###########################################
 # env_configs = {}
 
-# if motor_control_mode == "CPG":
-#     interm_dir = "./logs/intermediate_models_cpg/"
-# elif motor_control_mode == "CARTESIAN_PD":
-#     interm_dir = "./logs/intermediate_models_cartesian_pd/"
-# elif motor_control_mode == "PD":
-#     interm_dir = "./logs/intermediate_models_pd/"
-# else:
-#     interim_dir = "./logs/intermediate_models/"
+if motor_control_mode == "CPG":
+    interm_dir = "./logs/intermediate_models_cpg/"
+elif motor_control_mode == "CARTESIAN_PD":
+    interm_dir = "./logs/intermediate_models_cartesian_pd/"
+elif motor_control_mode == "PD":
+    interm_dir = "./logs/intermediate_models_pd/"
+else:
+    interim_dir = "./logs/intermediate_models/"
 
-interm_dir = "./logs/comparison-joint-cart-cpg/"
+#interm_dir = "./logs/comparison-joint-cart-cpg/"
 
 
 if USE_GPU : #and LEARNING_ALG=="SAC":

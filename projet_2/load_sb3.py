@@ -54,35 +54,35 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
-LEARNING_ALG = "PPO"
-EPISODE_LENGTH = 2
+LEARNING_ALG = "SAC"
+EPISODE_LENGTH = 20
 
 #plot graphs or not
-##########################################################################
-plot_cpg = False
-plot_foot_pos = True
+#########################################################################
+plot_cpg = True
+plot_foot_pos = False
 plot_speed_pos = True
-plot_training = False
+plot_training = True
 plot_CoT = True
-plot_torque = True
 
-###########################################################################
+
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
+##########################################################################
 env_config = {}
-env_config['render'] =  False
+env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
-env_config['competition_env'] = True            #### SET COMPET ENV HERE
-# env_config['test_env'] = True
+env_config['competition_env'] = True
+env_config['test_env'] = False
 
-motor_control_mode = "CARTESIAN_PD"                   ##### SET MOTOR CONTROL HERE
+motor_control_mode = "CPG"                   # set motor control
 
-############################################### CPG_RL ##########################################################
+############################################### CPG_RL ###################
 env_config['motor_control_mode'] = motor_control_mode
-env_config['observation_space_mode'] = "LR_COURSE_OBS_V2"
-env_config['task_env'] = "CARTESIAN_RWD"
-#################################################################################################################
+env_config['observation_space_mode'] = "CPG_RL"
+env_config['task_env'] = "TEST"
+##########################################################################
 
 if motor_control_mode == "CPG":
     interm_dir = "./logs/intermediate_models_cpg/"
@@ -91,65 +91,19 @@ elif motor_control_mode == "CARTESIAN_PD":
 elif motor_control_mode == "PD":
     interm_dir = "./logs/intermediate_models_pd/"
 else:
-    interim_dir = "./logs/intermediate_models/"
+    interm_dir = "./logs/intermediate_models/"
 
 #interm_dir = "./logs/comparison-joint-cart-cpg/"
 
+log_dir = interm_dir + 'CPG_120622231142_best_run_yet'
 
-# path to saved models, i.e. interm_dir + '121321105810'
-# log_dir = interm_dir + '112622123152'
-# log_dir = interm_dir + 'cpg_rl_120122090257'                #supposed to work but already a t 1.5?
-# log_dir = interm_dir + 'cpg_rl_112922155242_vel_1.0'                   # this is the last one with 1.0
-# log_dir = interm_dir + 'cpg_rl_112822072518'
-# log_dir = interm_dir + 'cpg_rl_test_env120622075011'            #test avec obstacles en train
-# log_dir = interm_dir + 'CPG_120622193517'                           # 2eme avec nouveaux cpg?
-# log_dir = interm_dir + 'CPG_120822101153'                       #moving in y but not ok yet
-
-# log_dir = interm_dir + 'CPG_120822174454'            # new reward fct avec deplacement en y
-
-# log_dir = interm_dir + 'CPG_cart_solve_y_121222100704'      #maybe the right for y
-
-# log_dir = interm_dir + 'CPG_cart_solve_y_121122161834'
-
-# log_dir = interm_dir + 'CPG_y_displacement_121322165520'
-
-# log_dir = interm_dir + 'CPG_y_displacement_121422150803'            #test with in y, might work
-##########################################################################################################################################################################
-
-# log_dir = interm_dir + 'CPG_test_best_run_follow_new_rwd_121822234256'
-
-# log_dir = interm_dir + 'CPG_120822174454'            # new reward fct avec deplacement en y
-
-# log_dir = interm_dir + 'CPG_best_run_follow_121022163418'       #funny but bad
-
-# log_dir = interm_dir + 'CPG_test_old_y_121522221641'
-
-# log_dir = interm_dir + 'CPG_test_y_offset_in_hopf121722100211'          #try with y offset in hopf
-
-# log_dir = interm_dir + 'CPGCPG_test_y_offset_only_in_cart_121722174616'    # try with y offset only for cart (not joint)
-
-log_dir = interm_dir + 'CPG_test_with_psi_limited_122122232452'
-
-# log_dir = interm_dir + 'CPG_CPG_y_corrected_try_without_cart121522141406'   #new try without cartesian
-
-# log_dir = interm_dir + 'CPG_cpg_backward_121222204813'          #backward
-
-# log_dir = interm_dir + 'CPG_121022113942'            #test with in y, might work
-
-log_dir = interm_dir + 'CARTESIAN_PD_cartesian_rwd_old_scaling_121922150148 - speedy'            #test with in y, might work
-
-# log_dir = interm_dir + 'CPG_test_added_ztrain_to_actionS_121822171359'          #added z to action space
-############################################################################################################################################################33
-
-
-# # get latest model and normalization stats, and plot
+# get latest model and normalization stats, and plot
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
 model_name = get_latest_model(log_dir)
 monitor_results = load_results(log_dir)
 if plot_training:
     print(monitor_results)
     plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
-# plt.show()
 
 # reconstruct env 
 env = lambda: QuadrupedGymEnv(**env_config)
@@ -168,30 +122,30 @@ print("\nLoaded model", model_name, "\n")
 obs = env.reset()
 episode_reward = 0
 
-# [TODO] initialize arrays to save data from simulation
+# initialize arrays to save data from simulation
+leg_pos_tab = np.empty((1, 3))  # current leg position
+des_leg_pos_tab = np.empty((1, 3))  # desired leg position
 
-leg_pos_tab = np.empty((1, 3))
-des_leg_pos_tab = np.empty((1, 3))
+leg_torque_tab = np.empty((1, 3))  # current leg torque
+des_leg_torque_tab = np.empty((1, 3))  # desired leg torque
 
-leg_torque_tab = np.empty((1, 3))
-des_leg_torque_tab = np.empty((1, 3))
+robot_pos_tab = np.empty((1, 3))  # current base position
+robot_speed_tab = np.empty((1, 3))  # current speed in x y and z
 
-r_tab = np.empty((1, 4))
-rdot_tab = np.empty((1, 4))
-theta_tab = np.empty((1, 4))
-thetadot_tab = np.empty((1, 4))
-# #
-robot_pos_tab = np.empty((1, 3))
-robot_speed_tab = np.empty((1, 3)) # speed in x y and z
+CoT_tab = np.empty([1])  # Cost of transport
 
-CoT_tab = np.empty([1])
+# for CPGs
+r_tab = np.empty((1, 4))  # Amplitude
+rdot_tab = np.empty((1, 4))  # Amplitude derivative
+theta_tab = np.empty((1, 4))  # Angle
+thetadot_tab = np.empty((1, 4))  # Angle derivative
+
 
 ROBOT_MASS = np.sum(env.envs[0].env.robot.GetTotalMassFromURDF())
 G = 9.81
 
-
 for i in range(100 * EPISODE_LENGTH):
-    action, _states = model.predict(obs, deterministic=False) # sample at test time? ([TODO]: test)
+    action, _states = model.predict(obs, deterministic=False)
     obs, rewards, dones, info = env.step(action)
     episode_reward += rewards
     if dones:
@@ -201,31 +155,31 @@ for i in range(100 * EPISODE_LENGTH):
         final_time = info[0]['episode']['t'] / 100
         print(f'Final time before failure is {final_time} [s]')
         break
-    # [TODO] save data from current robot states for plots
 
-    # collection of robot states
-    dq = np.array(env.envs[0].env.robot.GetMotorVelocities()).reshape(1, -1)
-    torques = env.envs[0].env.robot.GetMotorTorques()
-    speed = np.array(env.envs[0].env.robot.GetBaseLinearVelocity()).reshape(1, -1)  # [:-1]
-    base_pos = np.array(env.envs[0].env.robot.GetBasePosition()).reshape(1, -1)
-    _, curr_leg_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(0) # leg 0
-    curr_leg_pos = np.array(curr_leg_pos).reshape(1, -1)
-    des_leg_torque = np.array(env.envs[0].env.get_des_torques[:3]).reshape(1, -1)
-
-    # CoT computation
-    power = np.sum(np.abs(np.multiply(dq, torques)))
-    CoT = np.array(power / (np.linalg.norm(speed) * ROBOT_MASS * G)).reshape(1)  # CoT
-
-    torques = np.array(env.envs[0].env.robot.GetMotorTorques()[:3]).reshape(1, -1)
+    if motor_control_mode == "CPG" or motor_control_mode == "CARTESIAN_PD":
+        # collection of robot states
+        dq = np.array(env.envs[0].env.robot.GetMotorVelocities()).reshape(1, -1)
+        torques = env.envs[0].env.robot.GetMotorTorques()
+        speed = np.array(env.envs[0].env.robot.GetBaseLinearVelocity()).reshape(1, -1)  # [:-1]
+        base_pos = np.array(env.envs[0].env.robot.GetBasePosition()).reshape(1, -1)
+        _, curr_leg_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(0) # leg 0
+        curr_leg_pos = np.array(curr_leg_pos).reshape(1, -1)
 
 
-    # Updating arrays
-    robot_speed_tab = np.append(robot_speed_tab, speed, axis=0)
-    robot_pos_tab = np.append(robot_pos_tab, base_pos, axis=0)
-    leg_pos_tab = np.append(leg_pos_tab, curr_leg_pos, axis=0)
-    CoT_tab = np.append(CoT_tab, CoT, axis=0)
-    leg_torque_tab = np.append(leg_torque_tab, torques, axis=0)
-    des_leg_torque_tab = np.append(des_leg_torque_tab, des_leg_torque, axis=0)
+        # CoT computation
+        power = np.sum(np.abs(np.multiply(dq, torques)))
+        CoT = np.array(power / (np.linalg.norm(speed) * ROBOT_MASS * G)).reshape(1)  # CoT
+
+        # update torques to have the correct shape
+        torques = np.array(env.envs[0].env.robot.GetMotorTorques()[:3]).reshape(1, -1)
+
+        # Updating arrays
+        robot_speed_tab = np.append(robot_speed_tab, speed, axis=0)
+        robot_pos_tab = np.append(robot_pos_tab, base_pos, axis=0)
+        leg_pos_tab = np.append(leg_pos_tab, curr_leg_pos, axis=0)
+        CoT_tab = np.append(CoT_tab, CoT, axis=0)
+        leg_torque_tab = np.append(leg_torque_tab, torques, axis=0)
+
 
     if motor_control_mode == "CPG":
         # collection of CPG states
@@ -242,23 +196,33 @@ for i in range(100 * EPISODE_LENGTH):
         theta_tab = np.append(theta_tab, theta, axis=0)
         thetadot_tab = np.append(thetadot_tab, thetadot, axis=0)
 
-    else:
+    elif motor_control_mode == "CARTESIAN_PD":
         new_des_leg_pos = np.array(env.envs[0].env.get_des_pos[:3]).reshape(1, -1)
+        des_leg_torque = np.array(env.envs[0].env.get_des_torques[:3]).reshape(1, -1)
         des_leg_pos_tab = np.append(des_leg_pos_tab, new_des_leg_pos, axis=0)
+        des_leg_torque_tab = np.append(des_leg_torque_tab, des_leg_torque, axis=0)
+    else:
+        print("graphs were not implemented for joint PD")
+        plot_cpg = False
+        plot_foot_pos = False
+        plot_speed_pos = False
+        plot_CoT = False
 
-# [TODO] make plots:
+###############################################
+# plots:
+###############################################
 
+# get time for plotting
 if not dones:
     final_time = EPISODE_LENGTH
-
 t = np.arange(0, final_time, final_time / len(des_leg_pos_tab))
 
+# Plot CPG states
 if plot_cpg and motor_control_mode == "CPG":
     colors = np.array(["b", "g", "r", "c"])
     fig = plt.figure()
     subfigs = fig.subfigures(2, 2, wspace=0.07)
 
-    labels = np.array(["time [s]", "amplitudes"])
     labels = np.array(["time [s]", "amplitudes"])
     ax1 = subfigs[0, 0].subplots(4, sharex=True)
     subfigs[0, 0].suptitle("amplitude of oscillators (r)")
@@ -282,7 +246,6 @@ if plot_cpg and motor_control_mode == "CPG":
     plt.xlabel(labels[0])
 
     labels = np.array(["time [s]", "derivate of amplitude"])
-    labels = np.array(["time [s]", "derivate of amplitude"])
     ax3 = subfigs[1, 0].subplots(4, sharex=True)
     subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
     for i, ax in enumerate(ax3):
@@ -303,8 +266,6 @@ if plot_cpg and motor_control_mode == "CPG":
             ax.set_ylabel(labels[1], loc="top")
         ax.legend()
     plt.xlabel(labels[0])
-
-######################################################################
 
 # Plot Cost of transport
 if plot_CoT:
@@ -376,13 +337,14 @@ if plot_speed_pos:
     ax2.set_xlabel(labels[0])
     ax2.set_ylabel(labels[1])
 
+# Find maximum horizontal speed of the run
 speed_xy = robot_speed_tab[:, :2]
 lin_speed = np.sum(np.abs(speed_xy)**2, axis=-1)**(1./2)
 print(f"max speed is {lin_speed.max()} [m/s]")
 
+# Find average CoT once stabilized
 n = 100
 avg_cot = np.mean(CoT_tab[-100:])
-
 print(f"Cost of transport over the last {n} values of the run: {avg_cot}")
 
 plt.show()

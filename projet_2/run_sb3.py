@@ -51,7 +51,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 
 LEARNING_ALG = "SAC" # or "SAC"
-LOAD_NN = True # if you want to initialize training with a previous model                   #HERE HERE HERE
+LOAD_NN = False # if you want to initialize training with a previous model                   #HERE HERE HERE
 NUM_ENVS = 10    # how many pybullet environments to create for data collection
 USE_GPU = True  # make sure to install all necessary drivers
 
@@ -67,37 +67,39 @@ motor_control_mode = "CPG"                          ##### SET MOTOR CONTROL HERE
 ######## test for CPG RL
 env_configs = {"motor_control_mode": motor_control_mode,
                "observation_space_mode": "CPG_RL",
-               "task_env": "TEST",
-               # "test_env": True,
+               "task_env": "FWD_LOCOMOTION",
+               "test_env": False,
                # "render": True
                }
 ###########################################
 # env_configs = {}
 
-if motor_control_mode == "CPG":
-    interm_dir = "./logs/intermediate_models_cpg/"
-elif motor_control_mode == "CARTESIAN_PD":
-    interm_dir = "./logs/intermediate_models_cartesian_pd/"
-elif motor_control_mode == "PD":
-    interm_dir = "./logs/intermediate_models_pd/"
-else:
-    interim_dir = "./logs/intermediate_models/"
+# if motor_control_mode == "CPG":
+#     interm_dir = "./logs/intermediate_models_cpg/"
+# elif motor_control_mode == "CARTESIAN_PD":
+#     interm_dir = "./logs/intermediate_models_cartesian_pd/"
+# elif motor_control_mode == "PD":
+#     interm_dir = "./logs/intermediate_models_pd/"
+# else:
+#     interim_dir = "./logs/intermediate_models/"
+
+interm_dir = "./logs/comparison-joint-cart-cpg/"
 
 
-if USE_GPU and LEARNING_ALG=="SAC":
+if USE_GPU : #and LEARNING_ALG=="SAC":
     gpu_arg = "auto"
 else:
     gpu_arg = "cpu"
 
 if LOAD_NN:
     # interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'CPG_120622231142_best_run_yet'                # put the name of last model here
+    log_dir = interm_dir + 'CARTESIAN_PD_PPO_cartesian_rwd_old_scaling_slow_121922211541'                # put the name of last model here
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
 # SAVE_PATH = './logs/intermediate_models/' + 'cpg_rl_test_env' + datetime.now().strftime("%m%d%y%H%M%S") + '/'
-NAME = motor_control_mode + "_best_run_follow_" + datetime.now().strftime("%m%d%y%H%M%S")
+NAME = motor_control_mode + "_SAC_" + datetime.now().strftime("%m%d%y%H%M%S")
 SAVE_PATH = interm_dir + NAME + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
@@ -134,7 +136,8 @@ ppo_config = {  "gamma":0.99,
                 "ent_coef":0.0, 
                 "learning_rate":learning_rate, 
                 "vf_coef":0.5,
-                "max_grad_norm":0.5, 
+                "max_grad_norm":0.5,
+                "gamma":0.99,
                 "gae_lambda":0.95, 
                 "batch_size":128,
                 "n_epochs":10, 

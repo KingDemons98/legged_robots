@@ -54,31 +54,34 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
-LEARNING_ALG = "SAC"
-EPISODE_LENGTH = 10
+LEARNING_ALG = "PPO"
+EPISODE_LENGTH = 2
 
 #plot graphs or not
 ##########################################################################
-plot_cpg = True
+plot_cpg = False
 plot_foot_pos = True
 plot_speed_pos = True
+plot_training = False
+plot_CoT = True
+plot_torque = True
 
 ###########################################################################
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
 env_config = {}
-env_config['render'] = True
+env_config['render'] =  False
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 env_config['competition_env'] = False            #### SET COMPET ENV HERE
 # env_config['test_env'] = True
 
-motor_control_mode = "CPG"                   ##### SET MOTOR CONTROL HERE
+motor_control_mode = "CARTESIAN_PD"                   ##### SET MOTOR CONTROL HERE
 
 ############################################### CPG_RL ##########################################################
 env_config['motor_control_mode'] = motor_control_mode
-env_config['observation_space_mode'] = "CPG_RL"
-env_config['task_env'] = "TEST"
+env_config['observation_space_mode'] = "LR_COURSE_OBS_V2"
+env_config['task_env'] = "CARTESIAN_RWD"
 #################################################################################################################
 
 if motor_control_mode == "CPG":
@@ -89,6 +92,8 @@ elif motor_control_mode == "PD":
     interm_dir = "./logs/intermediate_models_pd/"
 else:
     interim_dir = "./logs/intermediate_models/"
+
+#interm_dir = "./logs/comparison-joint-cart-cpg/"
 
 
 # path to saved models, i.e. interm_dir + '121321105810'
@@ -104,7 +109,7 @@ else:
 # log_dir = interm_dir + 'CPG_120822174454'            # new reward fct avec deplacement en y
 
 
-log_dir = interm_dir + 'CPG_121022113942'            #test with in y, might work
+log_dir = interm_dir + 'CARTESIAN_PD_cartesian_rwd_old_scaling_121922150148 - speedy'            #test with in y, might work
 
 
 
@@ -134,28 +139,26 @@ obs = env.reset()
 episode_reward = 0
 
 # [TODO] initialize arrays to save data from simulation
-# leg_pos = np.zeros((3, 1))
-# des_leg_pos = np.zeros((3, 1))
-#
-# r = np.zeros((4, 1))
-# rdot = np.zeros((4, 1))
-# theta = np.zeros((4, 1))
-# thetadot = np.zeros((4, 1))
-# #
-# robot_pos = np.zeros((3, 1))
-# robot_speed = np.zeros((3, 1))
 
-leg_pos = np.zeros((3, 100 * EPISODE_LENGTH))
-des_leg_pos = np.zeros((3, 100 * EPISODE_LENGTH))
-############################# CPG vectors ##########################################################################
-if motor_control_mode == "CPG":
-    r = np.zeros((4, 100 * EPISODE_LENGTH))
-    rdot = np.zeros((4, 100 * EPISODE_LENGTH))
-    theta = np.zeros((4, 100 * EPISODE_LENGTH))
-    thetadot = np.zeros((4, 100 * EPISODE_LENGTH))
-#######################################################################################################################
-robot_pos = np.zeros((3, 100 * EPISODE_LENGTH))
-robot_speed = np.zeros((3, 100 * EPISODE_LENGTH))
+leg_pos_tab = np.empty((1, 3))
+des_leg_pos_tab = np.empty((1, 3))
+
+leg_torque_tab = np.empty((1, 3))
+des_leg_torque_tab = np.empty((1, 3))
+
+r_tab = np.empty((1, 4))
+rdot_tab = np.empty((1, 4))
+theta_tab = np.empty((1, 4))
+thetadot_tab = np.empty((1, 4))
+# #
+robot_pos_tab = np.empty((1, 3))
+robot_speed_tab = np.empty((1, 3)) # speed in x y and z
+
+CoT_tab = np.empty([1])
+
+ROBOT_MASS = np.sum(env.envs[0].env.robot.GetTotalMassFromURDF())
+G = 9.81
+
 
 for i in range(100 * EPISODE_LENGTH):
     action, _states = model.predict(obs, deterministic=False) # sample at test time? ([TODO]: test)
@@ -165,41 +168,71 @@ for i in range(100 * EPISODE_LENGTH):
         print('episode_reward', episode_reward)
         print('Final base position', info[0]['base_pos'])
         episode_reward = 0
-
+        final_time = info[0]['episode']['t'] / 100
+        print(f'Final time before failure is {final_time} [s]')
+        break
     # [TODO] save data from current robot states for plots
 
+    # collection of robot states
+    dq = np.array(env.envs[0].env.robot.GetMotorVelocities()).reshape(1, -1)
+    torques = env.envs[0].env.robot.GetMotorTorques()
+    speed = np.array(env.envs[0].env.robot.GetBaseLinearVelocity()).reshape(1, -1)  # [:-1]
+    base_pos = np.array(env.envs[0].env.robot.GetBasePosition()).reshape(1, -1)
+    _, curr_leg_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(0) # leg 0
+    curr_leg_pos = np.array(curr_leg_pos).reshape(1, -1)
+    des_leg_torque = np.array(env.envs[0].env.get_des_torques[:3]).reshape(1, -1)
+
+    # CoT computation
+    power = np.sum(np.abs(np.multiply(dq, torques)))
+    CoT = np.array(power / (np.linalg.norm(speed) * ROBOT_MASS * G)).reshape(1)  # CoT
+
+    torques = np.array(env.envs[0].env.robot.GetMotorTorques()[:3]).reshape(1, -1)
+
+
+    # Updating arrays
+    robot_speed_tab = np.append(robot_speed_tab, speed, axis=0)
+    robot_pos_tab = np.append(robot_pos_tab, base_pos, axis=0)
+    leg_pos_tab = np.append(leg_pos_tab, curr_leg_pos, axis=0)
+    CoT_tab = np.append(CoT_tab, CoT, axis=0)
+    leg_torque_tab = np.append(leg_torque_tab, torques, axis=0)
+    des_leg_torque_tab = np.append(des_leg_torque_tab, des_leg_torque, axis=0)
+
     if motor_control_mode == "CPG":
+        # collection of CPG states
         xs, ys, zs = env.envs[0].env._cpg.update()
-        des_leg_pos[:, i] = np.array([xs[0], ys[0], zs[0]])
-        r[:, i] = env.envs[0].env._cpg.get_r()
-        rdot[:, i] = env.envs[0].env._cpg.get_dr()
-        theta[:, i] = env.envs[0].env._cpg.get_theta()
-        thetadot[:, i] = env.envs[0].env._cpg.get_dtheta()
+        r = np.array(env.envs[0].env._cpg.get_r()).reshape(1, -1)
+        rdot = np.array(env.envs[0].env._cpg.get_dr()).reshape(1, -1)
+        theta = np.array(env.envs[0].env._cpg.get_theta()).reshape(1, -1)
+        thetadot = np.array(env.envs[0].env._cpg.get_dtheta()).reshape(1, -1)
+
+        # Updating arrays
+        des_leg_pos_tab = np.append(des_leg_pos_tab, np.array([[xs[0], ys[0], zs[0]]]), axis=0)
+        r_tab = np.append(r_tab, r, axis=0)
+        rdot_tab = np.append(rdot_tab, rdot, axis=0)
+        theta_tab = np.append(theta_tab, theta, axis=0)
+        thetadot_tab = np.append(thetadot_tab, thetadot, axis=0)
+
     else:
-        des_leg_pos[:, i] = env.envs[0].env._robot_config.NOMINAL_FOOT_POS_LEG_FRAME
+        new_des_leg_pos = np.array(env.envs[0].env.get_des_pos[:3]).reshape(1, -1)
+        des_leg_pos_tab = np.append(des_leg_pos_tab, new_des_leg_pos, axis=0)
 
-    robot_pos[:, i] = env.envs[0].env.robot.GetBasePosition()
-    robot_speed[:, i] = env.envs[0].env.robot.GetBaseLinearVelocity()
-
-    _, leg_pos[:, i] = env.envs[0].env.robot.ComputeJacobianAndPosition(0)
-
-    # print(f'this is a test {env.envs[0].env.robot.GetBasePosition()}')
-    # if i == 300:
-    #     break
-    
 # [TODO] make plots:
 
-t = np.arange(r.shape[1])
+if not dones:
+    final_time = EPISODE_LENGTH
+
+t = np.arange(0, final_time, final_time / len(des_leg_pos_tab))
+
 if plot_cpg and motor_control_mode == "CPG":
     colors = np.array(["b", "g", "r", "c"])
     fig = plt.figure()
     subfigs = fig.subfigures(2, 2, wspace=0.07)
 
-    labels = np.array(["time [s]", "amplitudes []"])
+    labels = np.array(["time [s]", "amplitudes"])
     ax1 = subfigs[0, 0].subplots(4, sharex=True)
     subfigs[0, 0].suptitle("amplitude of oscillators (r)")
     for i, ax in enumerate(ax1):
-        ax.plot(t, r[i, :], label = 'leg' + str(i), color = colors[i])
+        ax.plot(t, r_tab[:, i], label='leg' + str(i), color=colors[i])
         ax.grid(True)
         if i == 1:
             ax.set_ylabel(labels[1], loc="bottom")
@@ -210,18 +243,18 @@ if plot_cpg and motor_control_mode == "CPG":
     ax2 = subfigs[0, 1].subplots(4, sharex=True)
     subfigs[0, 1].suptitle("angles of oscillators (theta)")
     for i, ax in enumerate(ax2):
-        ax.plot(t, theta[i, :], label = 'leg' + str(i), color = colors[i])
+        ax.plot(t, theta_tab[:, i], label='leg' + str(i), color=colors[i])
         ax.grid(True)
         if i == 1:
             ax.set_ylabel(labels[1], loc="bottom")
         ax.legend()
     plt.xlabel(labels[0])
 
-    labels = np.array(["time [s]", "derivate of amplitude []"])
+    labels = np.array(["time [s]", "derivate of amplitude"])
     ax3 = subfigs[1, 0].subplots(4, sharex=True)
     subfigs[1, 0].suptitle("derivative of amplitude (r dot)")
     for i, ax in enumerate(ax3):
-        ax.plot(t, rdot[i, :], label = 'leg' + str(i), color = colors[i])
+        ax.plot(t, rdot_tab[:, i], label='leg' + str(i), color=colors[i])
         ax.grid(True)
         if i == 1:
             ax.set_ylabel(labels[1], loc="top")
@@ -232,41 +265,69 @@ if plot_cpg and motor_control_mode == "CPG":
     ax4 = subfigs[1, 1].subplots(4, sharex=True)
     subfigs[1, 1].suptitle("Angular velocity (theta dot)")
     for i, ax in enumerate(ax4):
-        ax.plot(t, thetadot[i, :], label = 'leg' + str(i), color = colors[i])
+        ax.plot(t, thetadot_tab[:, i], label='leg' + str(i), color=colors[i])
         ax.grid(True)
         if i == 1:
             ax.set_ylabel(labels[1], loc="top")
         ax.legend()
     plt.xlabel(labels[0])
+
 ######################################################################
 
-if plot_foot_pos:
+# Plot Cost of transport
+if plot_CoT:
     fig = plt.figure()
+    plt.plot(t, CoT_tab)
+    plt.title("Cost of transport")
+    plt.xlabel("time [s]")
+    plt.ylabel("instant CoT [-]")
 
-    labels = np.array(["time [s]", "X [m]"])
+# Plot foot positions current and desired and foot torques current and desired
+if plot_foot_pos:
+    fig = plt.figure(figsize=(10, 8))
+    plt.subplots_adjust(left=0.15)
+    fig.suptitle("Desired positions vs actual position and desired torque vs actual torque")
+    subfigs = fig.subfigures(1, 2, wspace=0.07)
+
+    labels = np.array(["time [s]", "position [m]"])
     labels_positions = np.array(["x", "y", "z"])
-    labels_joint = np.array(["hip", "thigh", "calf"])
-    # ax1 = subfigs[0].subplots(3, 1, sharex=True, sharey=True)
-    ax1 = fig.subplots(3, 1, sharex=True)
-    fig.suptitle("foot positions")
+
+    ax1 = subfigs[0].subplots(3, 1, sharex=True)
+    subfigs[0].suptitle("Position desired vs actual")
     for i, ax in enumerate(ax1):
-        ax.plot(t, des_leg_pos[i, :], label = "desired leg position for " + labels_positions[i])
-        ax.plot(t, leg_pos[i, :], label = "actual leg position for " + labels_positions[i], color = "r")
+        ax.plot(t, des_leg_pos_tab[:, i], label="desired leg position for " + labels_positions[i])
+        ax.plot(t, leg_pos_tab[:, i], label="actual leg position for " + labels_positions[i], color="r")
         ax.grid(True)
         if i == 1:
             ax.set_ylabel(labels[1])
         ax.legend()
     plt.xlabel(labels[0])
-        ########################################################
 
+    labels = np.array(["time [s]", "torque [N/m]"])
+    labels_joint = np.array(["hip", "thigh", "calf"])
+
+    ax2 = subfigs[1].subplots(3, 1, sharex=True)
+    subfigs[1].suptitle("Torque desired vs actual")
+    for i, ax in enumerate(ax2):
+        ax.plot(t, des_leg_torque_tab[:, i], label="desired leg torque for " + labels_joint[i])
+        ax.plot(t, leg_torque_tab[:, i], label="actual leg torque for " + labels_joint[i], color="r")
+        ax.grid(True)
+        if i == 1:
+            ax.set_ylabel(labels[1])
+        ax.legend()
+    plt.xlabel(labels[0])
+
+# Plot robot speed on x, y and z and its position displacement
 if plot_speed_pos:
     fig = plt.figure()
+    fig.suptitle("Speeds and displacement")
     labels = np.array(["time [s]", "speed [m/s]"])
     subfigs = fig.subfigures(1, 2, wspace=0.07)
     labels_speed = np.array(["Vx", "Vy", "Vz"])
     ax1 = subfigs[0].subplots(3, sharex=True)
+    subfigs[0].suptitle("Speeds in x,y and z")
     for i, ax in enumerate(ax1):
-        ax.plot(t, robot_speed[i, :], label = labels_speed[i])
+        ax.plot(t, robot_speed_tab[:, i], label=labels_speed[i])
         ax.legend()
         if i == 1:
             ax.set_ylabel(labels[1])
@@ -274,11 +335,9 @@ if plot_speed_pos:
 
     labels = np.array(["x position", "y position"])
     ax2 = subfigs[1].subplots(1)
-    ax2.plot(robot_pos[0, :], robot_pos[1, :])
-    plt.xlabel(labels[0])
-    plt.ylabel(labels[1])
-
-    print(f'This is sparta: {robot_pos[0,:]} \n')
-    print(f'This is spartay: {robot_pos[1, :]}')
+    subfigs[1].suptitle("Displacement")
+    ax2.plot(robot_pos_tab[:, 0], robot_pos_tab[:, 1])
+    ax2.set_xlabel(labels[0])
+    ax2.set_ylabel(labels[1])
 
 plt.show()

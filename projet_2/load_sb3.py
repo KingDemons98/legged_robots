@@ -65,6 +65,8 @@ plot_speed_pos = True
 plot_training = True
 plot_CoT = True
 
+plot_dir = "./plots/"
+save_plot = True
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
@@ -103,7 +105,7 @@ model_name = get_latest_model(log_dir)
 monitor_results = load_results(log_dir)
 if plot_training:
     print(monitor_results)
-    plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ')
+    plot_results([log_dir], 10e10, 'timesteps', LEARNING_ALG + ' ', save_plot, plot_dir)
 
 # reconstruct env 
 env = lambda: QuadrupedGymEnv(**env_config)
@@ -150,7 +152,7 @@ for i in range(100 * EPISODE_LENGTH):
     obs, rewards, dones, info = env.step(action)
     episode_reward += rewards
     if dones:
-        print("robot fell")
+        print("robot fell or reached EPISODE_LENGTH in quadruped_gym_env")
         break
 
     if motor_control_mode == "CPG" or motor_control_mode == "CARTESIAN_PD":
@@ -278,6 +280,9 @@ if plot_cpg and motor_control_mode == "CPG":
         ax.legend()
     plt.xlabel(labels[0])
 
+    if save_plot:
+        plt.savefig(plot_dir + motor_control_mode + "_cpg_states.png")
+
 # Plot Cost of transport
 if plot_CoT:
     fig = plt.figure()
@@ -286,9 +291,12 @@ if plot_CoT:
     plt.xlabel("time [s]")
     plt.ylabel("instant CoT [-]")
 
+    if save_plot:
+        plt.savefig(plot_dir + motor_control_mode + "_CoT.png")
+
 # Plot foot positions current and desired and foot torques current and desired
 if plot_foot_pos_torque:
-    fig = plt.figure(figsize=(10, 8))
+    fig = plt.figure(figsize=(14, 8))
 
     fig.suptitle("Desired positions vs actual position and desired torque vs actual torque")
     subfigs = fig.subfigures(1, 2, wspace=0.07)
@@ -323,6 +331,9 @@ if plot_foot_pos_torque:
         ax.legend()
     plt.xlabel(labels[0])
 
+    if save_plot:
+        plt.savefig(plot_dir + motor_control_mode + "_pos_torque.png")
+
 # Plot robot speed on x, y and z and its position displacement
 if plot_speed_pos:
     fig = plt.figure(figsize=(10, 6))
@@ -348,15 +359,18 @@ if plot_speed_pos:
     ax2.set_xlabel(labels[0])
     ax2.set_ylabel(labels[1])
 
+    if save_plot:
+        plt.savefig(plot_dir + motor_control_mode + "_speed_disp.png")
+
 # Find maximum horizontal speed of the run
 speed_xy = robot_speed_tab[:, :2]
 lin_speed = np.sum(np.abs(speed_xy)**2, axis=-1)**(1./2)
-print(f"max speed is {lin_speed.max()} [m/s]")
+print(f"max horizontal speed is {lin_speed.max()} [m/s]")
 
 # Find average CoT once stabilized
 n = 100
 avg_cot = np.mean(CoT_tab[-100:])
-print(f"Cost of transport over the last {n} values of the run: {avg_cot}")
+print(f"Mean Cost of transport over the last {n} values of the run: {avg_cot}")
 
 plt.show()
 

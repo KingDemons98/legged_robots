@@ -70,7 +70,7 @@ plot_CoT = True
 # check ideal conditions, as well as robustness to UNSEEN noise during training
 ##########################################################################
 env_config = {}
-env_config['render'] = False
+env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 env_config['competition_env'] = True
@@ -144,6 +144,8 @@ thetadot_tab = np.empty((1, 4))  # Angle derivative
 ROBOT_MASS = np.sum(env.envs[0].env.robot.GetTotalMassFromURDF())
 G = 9.81
 
+final_time = EPISODE_LENGTH
+
 for i in range(100 * EPISODE_LENGTH):
     action, _states = model.predict(obs, deterministic=False)
     obs, rewards, dones, info = env.step(action)
@@ -152,7 +154,7 @@ for i in range(100 * EPISODE_LENGTH):
         print('episode_reward', episode_reward)
         print('Final base position', info[0]['base_pos'])
         episode_reward = 0
-        final_time = info[0]['episode']['t'] / 100
+        final_time = info[0]['episode']['t'] / 3.3
         print(f'Final time before failure is {final_time} [s]')
         break
 
@@ -213,8 +215,6 @@ for i in range(100 * EPISODE_LENGTH):
 ###############################################
 
 # get time for plotting
-if not dones:
-    final_time = EPISODE_LENGTH
 t = np.arange(0, final_time, final_time / len(des_leg_pos_tab))
 
 # Plot CPG states

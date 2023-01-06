@@ -55,7 +55,7 @@ from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
 LEARNING_ALG = "PPO"
-EPISODE_LENGTH = 10
+EPISODE_LENGTH = 5
 
 #plot graphs or not
 #########################################################################
@@ -150,9 +150,7 @@ for i in range(100 * EPISODE_LENGTH):
     obs, rewards, dones, info = env.step(action)
     episode_reward += rewards
     if dones:
-        print('episode_reward', episode_reward)
-        print('Final base position', info[0]['base_pos'])
-        episode_reward = 0
+        print("robot fell")
         break
 
     if motor_control_mode == "CPG" or motor_control_mode == "CARTESIAN_PD":
@@ -164,7 +162,6 @@ for i in range(100 * EPISODE_LENGTH):
         _, curr_leg_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(0) # leg 0
         curr_leg_pos = np.array(curr_leg_pos).reshape(1, -1)
         des_leg_torque = np.array(env.envs[0].env.get_des_torques[:3]).reshape(1, -1)
-
 
         # CoT computation
         power = np.sum(np.abs(np.multiply(dq, torques)))
@@ -207,6 +204,10 @@ for i in range(100 * EPISODE_LENGTH):
         plot_speed_pos = False
         plot_CoT = False
 
+
+# Print reward
+print('episode_reward', episode_reward)
+
 # Average X speed
 speed_x = robot_speed_tab[:, :1]
 mean_speed_x = np.mean(speed_x)
@@ -224,10 +225,8 @@ print(f"simulation was {final_time:.2f} [s]")
 # plots:
 ###############################################
 
-# get time for plotting
-t = np.arange(0, final_time, final_time / len(des_leg_pos_tab))
-
-print(t)
+# time array for plotting
+t = np.linspace(0, final_time, len(des_leg_pos_tab))
 
 # Plot CPG states
 if plot_cpg and motor_control_mode == "CPG":

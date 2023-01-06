@@ -54,7 +54,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
 
-LEARNING_ALG = "SAC"
+LEARNING_ALG = "PPO"
 EPISODE_LENGTH = 10
 
 #plot graphs or not
@@ -70,18 +70,18 @@ plot_CoT = True
 # check ideal conditions, as well as robustness to UNSEEN noise during training
 ##########################################################################
 env_config = {}
-env_config['render'] = True
+env_config['render'] = False
 env_config['record_video'] = False
 env_config['add_noise'] = False 
-env_config['competition_env'] = True
+env_config['competition_env'] = False
 env_config['test_env'] = False
 
-motor_control_mode = "CPG"                   # set motor control
+motor_control_mode = "CARTESIAN_PD"                   # set motor control
 
 ############################################### CPG_RL ###################
 env_config['motor_control_mode'] = motor_control_mode
-env_config['observation_space_mode'] = "CPG_RL"
-env_config['task_env'] = "TEST"
+env_config['observation_space_mode'] = "LR_COURSE_OBS"
+env_config['task_env'] = "CARTESIAN_RWD"
 ##########################################################################
 
 if motor_control_mode == "CPG":
@@ -95,7 +95,7 @@ else:
 
 #interm_dir = "./logs/comparison-joint-cart-cpg/"
 
-log_dir = interm_dir + 'CPG_120622231142_best_run_yet'
+log_dir = interm_dir + 'CARTESIAN_PD_cartesian_rwd_old_scaling_121922150148 - speedy'
 
 # get latest model and normalization stats, and plot
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
@@ -144,7 +144,6 @@ thetadot_tab = np.empty((1, 4))  # Angle derivative
 ROBOT_MASS = np.sum(env.envs[0].env.robot.GetTotalMassFromURDF())
 G = 9.81
 
-final_time = EPISODE_LENGTH
 
 for i in range(100 * EPISODE_LENGTH):
     action, _states = model.predict(obs, deterministic=False)
@@ -154,8 +153,6 @@ for i in range(100 * EPISODE_LENGTH):
         print('episode_reward', episode_reward)
         print('Final base position', info[0]['base_pos'])
         episode_reward = 0
-        final_time = info[0]['episode']['t'] / 3.3
-        print(f'Final time before failure is {final_time} [s]')
         break
 
     if motor_control_mode == "CPG" or motor_control_mode == "CARTESIAN_PD":
@@ -210,12 +207,27 @@ for i in range(100 * EPISODE_LENGTH):
         plot_speed_pos = False
         plot_CoT = False
 
+# Average X speed
+speed_x = robot_speed_tab[:, :1]
+mean_speed_x = np.mean(speed_x)
+print(f"mean x speed is {mean_speed_x} [m/s]")
+
+# Final X pos
+final_x_pos = robot_pos_tab[:, 0][-1]
+print(f"final x position is {final_x_pos} [m]")
+
+# Simulation time approx
+final_time = final_x_pos/mean_speed_x
+print(f"simulation was {final_time:.2f} [s]")
+
 ###############################################
 # plots:
 ###############################################
 
 # get time for plotting
 t = np.arange(0, final_time, final_time / len(des_leg_pos_tab))
+
+print(t)
 
 # Plot CPG states
 if plot_cpg and motor_control_mode == "CPG":

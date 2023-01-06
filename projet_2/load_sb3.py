@@ -59,11 +59,11 @@ EPISODE_LENGTH = 5
 
 #plot graphs or not
 #########################################################################
-plot_cpg = True
-plot_foot_pos_torque = True
+plot_cpg = False
+plot_foot_pos_torque = False
 plot_speed_pos = True
-plot_training = True
-plot_CoT = True
+plot_training = False
+plot_CoT = False
 
 plot_dir = "./plots/"
 save_plot = True
@@ -82,7 +82,7 @@ motor_control_mode = "CPG"                   # set motor control
 
 ############################################### CPG_RL ###################
 env_config['motor_control_mode'] = motor_control_mode
-env_config['observation_space_mode'] = "CPG_RL"
+env_config['observation_space_mode'] = "CPG_RL_COMPARISON"
 env_config['task_env'] = "TEST"
 ##########################################################################
 
@@ -99,7 +99,7 @@ else:
 
 # log_dir = interm_dir + 'CARTESIAN_PD_cartesian_rwd_old_scaling_121922150148 - speedy'
 
-log_dir = interm_dir + 'CPG_120622231142_best_run_yet'
+log_dir = interm_dir + 'CPG_test_comparison_cpg_basics_010423075935'
 
 # get latest model and normalization stats, and plot
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")
@@ -185,14 +185,14 @@ for i in range(100 * EPISODE_LENGTH):
 
     if motor_control_mode == "CPG":
         # collection of CPG states
-        xs, ys, zs = env.envs[0].env._cpg.update()
+        xs, zs = env.envs[0].env._cpg.update()
         r = np.array(env.envs[0].env._cpg.get_r()).reshape(1, -1)
         rdot = np.array(env.envs[0].env._cpg.get_dr()).reshape(1, -1)
         theta = np.array(env.envs[0].env._cpg.get_theta()).reshape(1, -1)
         thetadot = np.array(env.envs[0].env._cpg.get_dtheta()).reshape(1, -1)
 
         # Updating arrays
-        des_leg_pos_tab = np.append(des_leg_pos_tab, np.array([[xs[0], ys[0], zs[0]]]), axis=0)
+        des_leg_pos_tab = np.append(des_leg_pos_tab, np.array([[xs[0], -0.083, zs[0]]]), axis=0)
         r_tab = np.append(r_tab, r, axis=0)
         rdot_tab = np.append(rdot_tab, rdot, axis=0)
         theta_tab = np.append(theta_tab, theta, axis=0)

@@ -456,7 +456,7 @@ class QuadrupedGymEnv(gym.Env):
 
   def _reward_lr_test(self, des_vel_x = 0.0, des_vel_y = 0.0, des_vel_yaw = 0.0):
     """ Implement your reward function here. How will you improve upon the above? """
-    dt = 0.01
+    dt = 0.001
     # minimize energy
     pos = self.robot.GetBasePosition()
     energy_reward = 0
@@ -621,16 +621,15 @@ class QuadrupedGymEnv(gym.Env):
       J, foot_pos = self.robot.ComputeJacobianAndPosition(i)
       # desired foot position i (from RL above)
       Pd = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME[3*i: 3*i+3]
-      # des_foot_pos = des_foot_pos + np.array([0, sideSign[i] * foot_y, 0])
 
       # desired foot velocity i
       vd = np.zeros(3)
       # foot velocity in leg frame i (Equation 2)
       foot_vel = np.matmul(J, dq[3 * i:3 * i + 3])
-      # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
 
+      # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
       tau_cart = np.matmul(np.transpose(J), np.matmul(kpCartesian, des_foot_pos - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
-      # tau_cart = np.matmul(np.transpose(J),  np.matmul(kpCartesian, Pd - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
+
       if BEST_RUN:
           tau_cart = np.matmul(np.transpose(J),  np.matmul(kpCartesian, Pd - foot_pos) + np.matmul(kdCartesian, vd - foot_vel))
       tau += tau_cart

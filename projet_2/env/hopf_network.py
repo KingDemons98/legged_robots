@@ -87,7 +87,6 @@ class HopfNetwork():
 
     # set oscillator initial conditions  
     self.X[0,:] = np.random.rand(4) * .1
-    # self.X[0,:] = np.ones((4)) * 0.1
     self.X[1,:] = self.PHI[0,:]
     if use_RL:
       self.X[2, :] = np.random.rand(4) * .001#TODO init this
@@ -160,8 +159,7 @@ class HopfNetwork():
       if self.use_RL:
         phi = self.X[2, i]
         x[i] = -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.cos(phi)
-        # y[i] = sideSign[i] * foot_y -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
-        y[i]= -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
+        y[i] = -self._max_step_len_rl * (r[i] - MU_LOW) * np.cos(theta) * np.sin(phi)
 
       else:
         r = self.X[0, i]
@@ -173,7 +171,6 @@ class HopfNetwork():
 
     # scale x by step length
     if not self.use_RL:
-      # use des step len, fixed
       return x, z
     else:
       return x, y, z

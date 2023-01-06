@@ -592,7 +592,7 @@ class QuadrupedGymEnv(gym.Env):
       tau += tau_cart
 ########################################################################################################################
       action[3*i:3*i+3] = tau
-
+    self.get_des_torques = action
     return action
 
 

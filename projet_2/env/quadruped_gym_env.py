@@ -215,6 +215,22 @@ class QuadrupedGymEnv(gym.Env):
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0]*4))) - OBSERVATION_EPS)
+    elif self._observation_space_mode == "COMPARE":
+        observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
+                                            self._robot_config.VELOCITY_LIMITS,
+                                            np.array([1.0] * 4),
+                                            np.array([VX_MAX, VY_MAX, VZ_MAX]),  # base velocities
+                                            np.array([1.1] * 4),  # foot contact positions
+                                            np.array([5.0] * 3)  # base angular velocities
+                                            )) + OBSERVATION_EPS)
+
+        observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
+                                           -self._robot_config.VELOCITY_LIMITS,
+                                           np.array([-1.0] * 4),
+                                           np.array([-VX_MAX, -VY_MAX, -VZ_MAX]),  # base velocities
+                                           np.array([-1.0] * 4),  # foot contact positions
+                                           np.array([-5.0] * 3)  # base angular velocities
+                                           )) - OBSERVATION_EPS)
     elif self._observation_space_mode == "LR_COURSE_OBS":
       observation_high = (np.concatenate((
                           np.array([19.] * 3),
@@ -296,6 +312,14 @@ class QuadrupedGymEnv(gym.Env):
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation()))
+    elif self._observation_space_mode == "COMPARE":
+        self._observation = np.concatenate((self.robot.GetMotorAngles(),
+                                            self.robot.GetMotorVelocities(),
+                                            self.robot.GetBaseOrientation(),
+                                            self.robot.GetBaseLinearVelocity(),
+                                            self.robot.GetContactInfo()[3],
+                                            self.robot.GetBaseAngularVelocity()
+                                            ))
     elif self._observation_space_mode == "LR_COURSE_OBS":
       # Get foot positions
       foot_pos = []
@@ -309,7 +333,6 @@ class QuadrupedGymEnv(gym.Env):
       foot_vel = np.array(foot_vel)
       foot_pos = np.array(foot_pos)
 
-      # Get observation space vectors
       self._observation = np.concatenate((self.robot.GetBaseLinearVelocity(),  # 3x1
                                           self.robot.GetBaseAngularVelocity(),  # 3x1
                                           self.robot.GetMotorAngles(),  # 12x1
@@ -419,8 +442,6 @@ class QuadrupedGymEnv(gym.Env):
 
       #total reward
       reward = w1*vel_tracking_reward_x + w2*energy_reward + 0.01 + fallen_reward
-
-
 
       return max(reward, 0)  # keep rewards positive
 

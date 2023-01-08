@@ -159,7 +159,7 @@ for i in range(100 * EPISODE_LENGTH):
         # collection of robot states
         dq = np.array(env.envs[0].env.robot.GetMotorVelocities()).reshape(1, -1)
         torques = env.envs[0].env.robot.GetMotorTorques()
-        speed = np.array(env.envs[0].env.robot.GetBaseLinearVelocity()).reshape(1, -1)  # [:-1]
+        speed = np.array(env.envs[0].env.robot.GetBaseLinearVelocity()).reshape(1, -1)
         base_pos = np.array(env.envs[0].env.robot.GetBasePosition()).reshape(1, -1)
         _, curr_leg_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(0) # leg 0
         curr_leg_pos = np.array(curr_leg_pos).reshape(1, -1)
